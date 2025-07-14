@@ -164,6 +164,14 @@ void collectDurationPromise('validatePreconditions', validatePreconditions)()
 void collectDurationPromise('cleanupFtpFolder', cleanupFtpFolder)()
 void collectDurationPromise('validateConfig', validateConfig)({})
 
+// Check if using default security keys and warn if so
+if (!process.env.JWT_PRIVATE_KEY) {
+  logger.warn(`${colors.yellow('Warning')}: Using default JWT_PRIVATE_KEY. This is a security risk. Please set the JWT_PRIVATE_KEY environment variable to a secure random key.`)
+}
+if (!process.env.HMAC_KEY) {
+  logger.warn(`${colors.yellow('Warning')}: Using default HMAC_KEY. This is a security risk. Please set the HMAC_KEY environment variable to a secure random key.`)
+}
+
 // Function called first to ensure that all the i18n files are reloaded successfully before other linked operations.
 restoreOverwrittenFilesWithOriginals().then(() => {
   /* Locals */

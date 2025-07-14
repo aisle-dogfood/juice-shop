@@ -73,6 +73,22 @@ For a detailed introduction, full list of features and architecture overview ple
 5. Run `npm start`
 6. Browse to <http://localhost:3000>
 
+### Security Configuration
+
+For production deployments, it is strongly recommended to set the following environment variables to secure random values:
+
+- `JWT_PRIVATE_KEY`: Used for signing JSON Web Tokens (JWT)
+- `HMAC_KEY`: Used for HMAC operations
+
+Example:
+```
+export JWT_PRIVATE_KEY="your-secure-private-key"
+export HMAC_KEY="your-secure-hmac-key"
+npm start
+```
+
+If these environment variables are not set, the application will use default values, which is a security risk.
+
 ### Packaged Distributions
 
 [![GitHub release](https://img.shields.io/github/downloads/juice-shop/juice-shop/total.svg)](https://github.com/juice-shop/juice-shop/releases/latest)
