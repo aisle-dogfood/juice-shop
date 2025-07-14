@@ -4,7 +4,7 @@
  */
 
 import { Component, type OnInit } from '@angular/core'
-import { DomSanitizer } from '@angular/platform-browser'
+import { DomSanitizer, SecurityContext } from '@angular/platform-browser'
 import { ConfigurationService } from '../Services/configuration.service'
 import { FeedbackService } from '../Services/feedback.service'
 import { Gallery, type GalleryRef, GalleryComponent, GalleryImageDef } from 'ng-gallery'
@@ -116,12 +116,11 @@ export class AboutComponent implements OnInit {
       .subscribe((feedbacks) => {
         for (let i = 0; i < feedbacks.length; i++) {
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          feedbacks[i].comment = `<span style="width: 90%; display:block;">${
-            feedbacks[i].comment
-          }<br/> (${this.stars[feedbacks[i].rating]})</span>`
-          feedbacks[i].comment = this.sanitizer.bypassSecurityTrustHtml(
-            feedbacks[i].comment
-          )
+          // Create a safe HTML string with properly sanitized user content
+          const sanitizedComment = this.sanitizer.sanitize(SecurityContext.HTML, feedbacks[i].comment);
+          const starsHtml = this.stars[feedbacks[i].rating];
+          const safeHtml = `<span style="width: 90%; display:block;">${sanitizedComment}<br/> (${starsHtml})</span>`;
+          feedbacks[i].comment = this.sanitizer.bypassSecurityTrustHtml(safeHtml)
 
           this.galleryRef.addImage({
             src: this.images[i % this.images.length],
