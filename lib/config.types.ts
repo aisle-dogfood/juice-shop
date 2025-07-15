@@ -7,6 +7,10 @@ export interface ServerConfig {
   baseUrl: string
 }
 
+export interface SecurityConfig {
+  // These fields are intentionally left empty as they should be set via environment variables
+}
+
 export interface ApplicationConfig {
   domain: string
   name: string
@@ -123,15 +127,16 @@ export interface CtfConfig {
   showCountryDetailsInNotifications: 'none' | 'name' | 'flag' | 'both'
   countryMapping: Record<string, {
     name: string
-    code: string
-  }>
-}
-
 export interface AppConfig {
   server: ServerConfig
   application: ApplicationConfig
   challenges: ChallengesConfig
-  hackingInstructor: HackingInstructorConfig
+  hackingInstructor?: HackingInstructorConfig
+  products?: Product[]
+  memories?: Memory[]
+  ctf?: CtfConfig
+  security?: SecurityConfig
+}
   products: Product[]
   memories: Memory[]
   ctf: CtfConfig

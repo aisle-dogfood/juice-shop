@@ -2,6 +2,7 @@ server:
   port: 3000
   basePath: ''
   baseUrl: 'http://localhost:3000' # used for CSAF, e.g. https://example.com
+security: {} # JWT_PRIVATE_KEY and HMAC_KEY should be set via environment variables
 application:
   domain: juice-sh.op # for pre-loaded email users
   name: 'OWASP Juice Shop'
