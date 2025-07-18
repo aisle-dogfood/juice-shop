@@ -80,7 +80,15 @@ function handleXmlUpload ({ file }: Request, res: Response, next: NextFunction) 
       try {
         const sandbox = { libxml, data }
         vm.createContext(sandbox)
-        const xmlDoc = vm.runInContext('libxml.parseXml(data, { noblanks: true, noent: true, nocdata: true })', sandbox, { timeout: 2000 })
+        // SECURITY: This is an intentional XXE vulnerability for the xxeFileDisclosureChallenge and xxeDosChallenge.
+        // In a real application, you should set noent: false to prevent XXE attacks.
+        const xmlParseOptions = { 
+          noblanks: true, 
+          nocdata: true,
+          // Only enable XXE processing if the related challenges are enabled
+          noent: utils.isChallengeEnabled(challenges.xxeFileDisclosureChallenge) || utils.isChallengeEnabled(challenges.xxeDosChallenge)
+        }
+        const xmlDoc = vm.runInContext(`libxml.parseXml(data, ${JSON.stringify(xmlParseOptions)})`, sandbox, { timeout: 2000 })
         const xmlString = xmlDoc.toString(false)
         challengeUtils.solveIf(challenges.xxeFileDisclosureChallenge, () => { return (utils.matchesEtcPasswdFile(xmlString) || utils.matchesSystemIniFile(xmlString)) })
         res.status(410)
