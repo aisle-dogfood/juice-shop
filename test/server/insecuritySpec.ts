@@ -183,7 +183,7 @@ describe('insecurity', () => {
       expect(security.sanitizeSecure('Sani<iframe src="alert("IFrameXSS")"></iframe>tizedIFrame')).to.equal('SanitizedIFrame')
     })
 
-    it('cannot be bypassed by exploiting lack of recursive sanitization', () => {
+    it('properly removes all dangerous content', () => {
       expect(security.sanitizeSecure('Bla<<script>Foo</script>iframe src="javascript:alert(`xss`)">Blubb')).to.equal('BlaBlubb')
     })
   })
