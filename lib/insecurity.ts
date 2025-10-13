@@ -73,18 +73,35 @@ export const decode = (token: string) => {
   return jws.decode(token)?.payload;
 };
 
-export const sanitizeHtml = (html: string) => sanitizeHtmlLib(html);
+// Maintain backward compatibility for default behavior
+export const sanitizeHtml = (html: string) => 
+  sanitizeHtmlLib(html, {
+    // Use explicit default values similar to v1.4.2 behavior for security challenges
+    allowedTags: ['h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol', 'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div', 'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'iframe'],
+    allowedAttributes: {
+      'a': ['href', 'name', 'target'],
+      'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen']
+    },
+    // Allow dangerous URL schemes including javascript: for security challenges
+    allowedSchemes: ['http', 'https', 'ftp', 'mailto', 'javascript'],
+    // Disable new security features to maintain vulnerable behavior for challenges
+    enforceHtmlBoundary: false,
+    parseStyleAttributes: false
+  });
 export const sanitizeLegacy = (input = "") =>
   input.replace(/<(?:\w+)\W+?[\w]/gi, "");
 export const sanitizeFilename = (filename: string) =>
   sanitizeFilenameLib(filename);
+// For secure sanitization, use restrictive configuration
 export const sanitizeSecure = (html: string): string => {
-  const sanitized = sanitizeHtml(html);
-  if (sanitized === html) {
-    return html;
-  } else {
-    return sanitizeSecure(sanitized);
-  }
+  const sanitized = sanitizeHtmlLib(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+    enforceHtmlBoundary: true,
+    parseStyleAttributes: true
+  });
+  // Recursive sanitization is no longer needed as v2.12.1 handles this properly
+  return sanitized;
 };
 
 export const authenticatedUsers: IAuthenticatedUsers = {
