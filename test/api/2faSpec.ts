@@ -151,7 +151,7 @@ describe('/rest/2fa/verify', () => {
     const tmpTokenWurstbrot = jwt.sign({
       userId: 10,
       type: 'password_valid_needs_second_factor_token'
-    }, 'this_surly_isnt_the_right_key')
+    }, 'this_surly_isnt_the_right_key', { allowInsecureKeySizes: true })
 
     const totpToken = otplib.authenticator.generate('IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH')
 
