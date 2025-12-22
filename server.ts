@@ -634,8 +634,8 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.get('/redirect', performRedirect())
 
   /* Routes for promotion video page */
-  app.get('/promotion', promotionVideo())
-  app.get('/video', getVideo())
+  app.get('/promotion', rateLimit({ windowMs: 5 * 60 * 1000, max: 20, validate: false }), promotionVideo())
+  app.get('/video', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), getVideo())
 
   /* Routes for profile page */
   app.get('/profile', security.updateAuthenticatedUsers(), getUserProfile())
