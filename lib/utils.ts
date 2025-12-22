@@ -115,12 +115,148 @@ export const extractFilename = (url: string) => {
   if (contains(file, '?')) {
     file = file.substring(0, file.indexOf('?'))
   }
+  
+  // Sanitize filename to prevent path traversal attacks
+  // Remove any path components (../ or ..\)
+  file = file.replace(/\.\.[/\\]/g, '')
+  // Remove leading dots and slashes
+  file = file.replace(/^[./\\]+/, '')
+  // Replace any remaining path separators with underscores
+  file = file.replace(/[/\\]/g, '_')
+  
   return file
+}
+
+/**
+ * Validates if a URL is safe for downloading remote resources.
+ * Checks for:
+ * - HTTPS scheme only (HTTP allowed only in development)
+ * - Blocked private/internal IP ranges (RFC1918, localhost, link-local)
+ * - Valid URL format
+ */
+export const isSafeUrl = (urlString: string): boolean => {
+  try {
+    const url = new URL(urlString)
+    
+    // Only allow HTTPS (or HTTP in development mode)
+    const isDevelopment = process.env.NODE_ENV === 'development' || config.util.getEnv('NODE_ENV') === 'development'
+    if (url.protocol !== 'https:' && !(isDevelopment && url.protocol === 'http:')) {
+      logger.warn(`Blocked URL with unsafe protocol: ${url.protocol}`)
+      return false
+    }
+    
+    const hostname = url.hostname.toLowerCase()
+    
+    // Block localhost variations
+    if (hostname === 'localhost' || hostname === '0.0.0.0') {
+      logger.warn(`Blocked localhost URL: ${hostname}`)
+      return false
+    }
+    
+    // Block IPv6 localhost
+    if (hostname === '::1' || hostname === '::' || hostname.startsWith('::ffff:127.')) {
+      logger.warn(`Blocked IPv6 localhost URL: ${hostname}`)
+      return false
+    }
+    
+    // Check for IPv4 addresses and block private ranges
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+    const ipv4Match = hostname.match(ipv4Regex)
+    if (ipv4Match) {
+      const octets = ipv4Match.slice(1).map(Number)
+      
+      // Validate octets are in valid range
+      if (octets.some(octet => octet > 255)) {
+        logger.warn(`Blocked invalid IP address: ${hostname}`)
+        return false
+      }
+      
+      // Block private networks (RFC1918)
+      // 10.0.0.0/8
+      if (octets[0] === 10) {
+        logger.warn(`Blocked RFC1918 private IP (10.0.0.0/8): ${hostname}`)
+        return false
+      }
+      
+      // 172.16.0.0/12
+      if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) {
+        logger.warn(`Blocked RFC1918 private IP (172.16.0.0/12): ${hostname}`)
+        return false
+      }
+      
+      // 192.168.0.0/16
+      if (octets[0] === 192 && octets[1] === 168) {
+        logger.warn(`Blocked RFC1918 private IP (192.168.0.0/16): ${hostname}`)
+        return false
+      }
+      
+      // Block loopback (127.0.0.0/8)
+      if (octets[0] === 127) {
+        logger.warn(`Blocked loopback IP (127.0.0.0/8): ${hostname}`)
+        return false
+      }
+      
+      // Block link-local (169.254.0.0/16)
+      if (octets[0] === 169 && octets[1] === 254) {
+        logger.warn(`Blocked link-local IP (169.254.0.0/16): ${hostname}`)
+        return false
+      }
+      
+      // Block multicast (224.0.0.0/4)
+      if (octets[0] >= 224 && octets[0] <= 239) {
+        logger.warn(`Blocked multicast IP (224.0.0.0/4): ${hostname}`)
+        return false
+      }
+      
+      // Block reserved/broadcast (240.0.0.0/4 and 255.255.255.255)
+      if (octets[0] >= 240) {
+        logger.warn(`Blocked reserved IP (240.0.0.0/4): ${hostname}`)
+        return false
+      }
+    }
+    
+    // Block internal/private hostnames
+    const blockedHostnames = [
+      'internal', 'local', 'localdomain', 'lan',
+      'metadata.google.internal', // GCP metadata
+      '169.254.169.254' // AWS/Azure metadata
+    ]
+    if (blockedHostnames.some(blocked => hostname.includes(blocked))) {
+      logger.warn(`Blocked potentially internal hostname: ${hostname}`)
+      return false
+    }
+    
+    return true
+  } catch (err) {
+    logger.warn(`Invalid URL format: ${urlString}`)
+    return false
+  }
 }
 
 export const downloadToFile = async (url: string, dest: string) => {
   try {
-    const data = await download(url)
+    // Validate URL safety before downloading
+    if (!isSafeUrl(url)) {
+      logger.warn(`Blocked download from unsafe URL: ${url}`)
+      return // Exit gracefully without downloading
+    }
+    
+    // Set timeout and size limits for download
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB limit
+    const TIMEOUT_MS = 10000 // 10 second timeout
+    
+    // Disable redirects to prevent redirect-based SSRF attacks
+    const data = await download(url, {
+      timeout: TIMEOUT_MS,
+      followRedirect: false
+    })
+    
+    // Check file size
+    if (data.length > MAX_FILE_SIZE) {
+      logger.warn(`Blocked download: file too large (${data.length} bytes, max ${MAX_FILE_SIZE})`)
+      return // Exit gracefully without writing file
+    }
+    
     fs.writeFileSync(dest, data)
   } catch (err) {
     logger.warn('Failed to download ' + url + ' (' + getErrorMessage(err) + ')')
