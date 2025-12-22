@@ -263,19 +263,27 @@ restoreOverwrittenFilesWithOriginals().then(() => {
 
   // vuln-code-snippet start directoryListingChallenge accessLogDisclosureChallenge
   /* /ftp directory browsing and file download */ // vuln-code-snippet neutral-line directoryListingChallenge
-  app.use('/ftp', serveIndexMiddleware, serveIndex('ftp', { icons: true })) // vuln-code-snippet vuln-line directoryListingChallenge
+  if (config.get<boolean>('server.enableDirectoryBrowsing')) {
+    app.use('/ftp', serveIndexMiddleware, serveIndex('ftp', { icons: true })) // vuln-code-snippet vuln-line directoryListingChallenge
+  }
   app.use('/ftp(?!/quarantine)/:file', servePublicFiles()) // vuln-code-snippet vuln-line directoryListingChallenge
   app.use('/ftp/quarantine/:file', serveQuarantineFiles()) // vuln-code-snippet neutral-line directoryListingChallenge
 
-  app.use('/.well-known', serveIndexMiddleware, serveIndex('.well-known', { icons: true, view: 'details' }))
+  if (config.get<boolean>('server.enableDirectoryBrowsing')) {
+    app.use('/.well-known', serveIndexMiddleware, serveIndex('.well-known', { icons: true, view: 'details' }))
+  }
   app.use('/.well-known', express.static('.well-known'))
 
   /* /encryptionkeys directory browsing */
-  app.use('/encryptionkeys', serveIndexMiddleware, serveIndex('encryptionkeys', { icons: true, view: 'details' }))
+  if (config.get<boolean>('server.enableDirectoryBrowsing')) {
+    app.use('/encryptionkeys', serveIndexMiddleware, serveIndex('encryptionkeys', { icons: true, view: 'details' }))
+  }
   app.use('/encryptionkeys/:file', serveKeyFiles())
 
   /* /logs directory browsing */ // vuln-code-snippet neutral-line accessLogDisclosureChallenge
-  app.use('/support/logs', serveIndexMiddleware, serveIndex('logs', { icons: true, view: 'details' })) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
+  if (config.get<boolean>('server.enableDirectoryBrowsing')) {
+    app.use('/support/logs', serveIndexMiddleware, serveIndex('logs', { icons: true, view: 'details' })) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
+  }
   app.use('/support/logs', verify.accessControlChallenges()) // vuln-code-snippet hide-line
   app.use('/support/logs/:file', serveLogFiles()) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
 
