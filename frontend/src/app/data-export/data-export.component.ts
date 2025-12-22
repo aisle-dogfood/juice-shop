@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-import { Component, type OnInit } from '@angular/core'
+import { Component, type OnInit, SecurityContext } from '@angular/core'
 import { UntypedFormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms'
 import { ImageCaptchaService } from '../Services/image-captcha.service'
 import { DataSubjectService } from '../Services/data-subject.service'
@@ -65,7 +65,8 @@ export class DataExportComponent implements OnInit {
       this.error = null
       this.confirmation = data.confirmation
       this.userData = data.userData
-      window.open('', '_blank', 'width=500')?.document.write(this.userData)
+      const sanitizedData = this.sanitizer.sanitize(SecurityContext.HTML, this.userData)
+      window.open('', '_blank', 'width=500')?.document.write(sanitizedData || '')
       this.lastSuccessfulTry = new Date()
       localStorage.setItem('lstdtxprt', JSON.stringify(this.lastSuccessfulTry))
       this.ngOnInit()
