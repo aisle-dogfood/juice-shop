@@ -11,7 +11,6 @@ import { MatTableModule } from '@angular/material/table'
 import { MatCardModule } from '@angular/material/card'
 import { RouterTestingModule } from '@angular/router/testing'
 import { TrackOrderService } from '../Services/track-order.service'
-import { DomSanitizer } from '@angular/platform-browser'
 import { of } from 'rxjs'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 
@@ -19,14 +18,10 @@ describe('TrackResultComponent', () => {
   let component: TrackResultComponent
   let fixture: ComponentFixture<TrackResultComponent>
   let trackOrderService: any
-  let sanitizer: any
 
   beforeEach(waitForAsync(() => {
     trackOrderService = jasmine.createSpyObj('TrackOrderService', ['find'])
     trackOrderService.find.and.returnValue(of({ data: [{ }] }))
-    sanitizer = jasmine.createSpyObj('DomSanitizer', ['bypassSecurityTrustHtml', 'sanitize'])
-    sanitizer.bypassSecurityTrustHtml.and.callFake((args: any) => args)
-    sanitizer.sanitize.and.returnValue({})
 
     TestBed.configureTestingModule({
       imports: [TranslateModule.forRoot(),
@@ -36,7 +31,6 @@ describe('TrackResultComponent', () => {
         TrackResultComponent],
       providers: [
         { provide: TrackOrderService, useValue: trackOrderService },
-        { provide: DomSanitizer, useValue: sanitizer },
         provideHttpClient(withInterceptorsFromDi()),
         provideHttpClientTesting()
       ]
@@ -54,12 +48,12 @@ describe('TrackResultComponent', () => {
     expect(component).toBeTruthy()
   })
 
-  it('should consider order number as trusted HTML', () => {
+  it('should store order number as plain text', () => {
     component.orderId = '<a src="link">Link</a>'
     trackOrderService.find.and.returnValue(of({ data: [{ orderId: component.orderId }] }))
     component.ngOnInit()
 
-    expect(sanitizer.bypassSecurityTrustHtml).toHaveBeenCalledWith('<code><a src="link">Link</a></code>')
+    expect(component.results.orderNo).toBe('<a src="link">Link</a>')
   })
 
   it('should set "delivered" status for delivered orders', () => {
