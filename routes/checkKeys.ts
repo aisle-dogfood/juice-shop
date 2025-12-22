@@ -3,11 +3,23 @@ import { HDNodeWallet } from 'ethers'
 import * as challengeUtils from '../lib/challengeUtils'
 import * as utils from '../lib/utils'
 import { challenges } from '../data/datacache'
+import logger from '../lib/logger'
+
+// Default mnemonic for demo/challenge purposes only
+// In production, this should be set via ETH_MNEMONIC environment variable
+const DEFAULT_MNEMONIC = 'purpose betray marriage blame crunch monitor spin slide donate sport lift clutch'
 
 export function checkKeys () {
   return (req: Request, res: Response) => {
     try {
-      const mnemonic = 'purpose betray marriage blame crunch monitor spin slide donate sport lift clutch'
+      // Load mnemonic from environment variable or use default for demo/challenge
+      const mnemonic = process.env.ETH_MNEMONIC ?? DEFAULT_MNEMONIC
+      
+      // Log warning if using default mnemonic
+      if (!process.env.ETH_MNEMONIC) {
+        logger.warn('Using default mnemonic for NFT challenge. Set ETH_MNEMONIC environment variable for production use.')
+      }
+      
       const mnemonicWallet = HDNodeWallet.fromPhrase(mnemonic)
       const privateKey = mnemonicWallet.privateKey
       const publicKey = mnemonicWallet.publicKey
