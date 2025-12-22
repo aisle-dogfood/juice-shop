@@ -127,7 +127,7 @@ export class ChallengeSolvedNotificationComponent implements OnInit {
       }
       const expires = new Date()
       expires.setFullYear(expires.getFullYear() + 1)
-      this.cookieService.put('continueCode', continueCode, { expires })
+      this.cookieService.put('continueCode', continueCode, { expires, secure: true, sameSite: 'strict' })
     }, (err) => { console.log(err) })
   }
 }
