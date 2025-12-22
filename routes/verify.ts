@@ -114,6 +114,8 @@ function jwtChallenge (challenge: Challenge, req: Request, algorithm: string, em
       return
     }
 
+    // Note: This function is intentionally vulnerable for educational purposes
+    // It's used to detect when users exploit JWT vulnerabilities as part of security challenges
     jwt.verify(token, security.publicKey, (err: jwt.VerifyErrors | null) => {
       if (err === null) {
         challengeUtils.solveIf(challenge, () => {

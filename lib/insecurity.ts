@@ -58,17 +58,37 @@ export const cutOffPoisonNullByte = (str: string) => {
   return str;
 };
 
-export const isAuthorized = () => expressJwt({ secret: publicKey } as any);
+const validateTokenAlgorithm = (token: string): boolean => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return false;
+    }
+    const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+    return header.alg === 'RS256';
+  } catch (err) {
+    return false;
+  }
+};
+
+export const isAuthorized = () => expressJwt({ secret: publicKey, algorithms: ['RS256'] } as any);
 export const denyAll = () => expressJwt({ secret: "" + Math.random() } as any);
 export const authorize = (user = {}) =>
   jwt.sign(user, privateKey, { expiresIn: "6h", algorithm: "RS256" });
-export const verify = (token: string) =>
-  token
-    ? (jws.verify as (token: string, secret: string) => boolean)(
-        token,
-        publicKey,
-      )
-    : false;
+export const verify = (token: string) => {
+  if (!token || !validateTokenAlgorithm(token)) {
+    return false;
+  }
+  try {
+    // Verify the token signature
+    return (jws.verify as (token: string, secret: string) => boolean)(
+      token,
+      publicKey,
+    );
+  } catch (err) {
+    return false;
+  }
+};
 export const decode = (token: string) => {
   return jws.decode(token)?.payload;
 };
@@ -213,7 +233,7 @@ export const appendUserId = () => {
 export const updateAuthenticatedUsers =
   () => (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.token || utils.jwtFrom(req);
-    if (token) {
+    if (token && validateTokenAlgorithm(token)) {
       jwt.verify(token, publicKey, (err: Error | null, decoded: any) => {
         if (err === null) {
           if (authenticatedUsers.get(token) === undefined) {
