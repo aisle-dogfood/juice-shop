@@ -54,7 +54,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
   public pageSizeOptions: number[] = []
   public dataSource!: MatTableDataSource<TableEntry>
   public gridDataSource!: any
-  public searchValue?: SafeHtml
+  public searchValue?: string
   public resultsLength = 0
   @ViewChild(MatPaginator, { static: true }) paginator: MatPaginator | null = null
   private readonly productSubscription?: Subscription
@@ -130,7 +130,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
 
   trustProductDescription (tableData: any[]) { // vuln-code-snippet neutral-line restfulXssChallenge
     for (let i = 0; i < tableData.length; i++) { // vuln-code-snippet neutral-line restfulXssChallenge
-      tableData[i].description = this.sanitizer.bypassSecurityTrustHtml(tableData[i].description) // vuln-code-snippet vuln-line restfulXssChallenge
+      // Product descriptions are kept as strings and will be sanitized by Angular when rendered with [innerHTML]
     } // vuln-code-snippet neutral-line restfulXssChallenge
   } // vuln-code-snippet neutral-line restfulXssChallenge
   // vuln-code-snippet end restfulXssChallenge
@@ -156,7 +156,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
         this.io.socket().emit('verifyLocalXssChallenge', queryParam)
       }) // vuln-code-snippet hide-end
       this.dataSource.filter = queryParam.toLowerCase()
-      this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam) // vuln-code-snippet vuln-line localXssChallenge xssBonusChallenge
+      this.searchValue = queryParam // Query parameter will be sanitized by Angular when rendered with [innerHTML]
       this.gridDataSource.subscribe((result: any) => {
         if (result.length === 0) {
           this.emptyState = true
