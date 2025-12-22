@@ -84,7 +84,7 @@ export class LocalBackupService {
     if (cookieValue) {
       const expires = new Date()
       expires.setFullYear(expires.getFullYear() + 1)
-      this.cookieService.put(cookieName, cookieValue, { expires })
+      this.cookieService.put(cookieName, cookieValue, { expires, secure: true, sameSite: 'strict' })
     } else {
       this.cookieService.remove(cookieName)
     }

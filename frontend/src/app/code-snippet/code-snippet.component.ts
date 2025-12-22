@@ -172,7 +172,7 @@ export class CodeSnippetComponent implements OnInit {
           }
           const expires = new Date()
           expires.setFullYear(expires.getFullYear() + 1)
-          this.cookieService.put('continueCodeFindIt', continueCode, { expires })
+          this.cookieService.put('continueCodeFindIt', continueCode, { expires, secure: true, sameSite: 'strict' })
         }, (err) => { console.log(err) })
       } else {
         this.solved.fixIt = true
@@ -182,7 +182,7 @@ export class CodeSnippetComponent implements OnInit {
           }
           const expires = new Date()
           expires.setFullYear(expires.getFullYear() + 1)
-          this.cookieService.put('continueCodeFixIt', continueCode, { expires })
+          this.cookieService.put('continueCodeFixIt', continueCode, { expires, secure: true, sameSite: 'strict' })
         }, (err) => { console.log(err) })
       }
       this.result = ResultState.Right
