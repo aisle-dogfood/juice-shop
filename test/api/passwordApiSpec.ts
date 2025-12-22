@@ -12,7 +12,7 @@ const REST_URL = 'http://localhost:3000/rest'
 const jsonHeader = { 'content-type': 'application/json' }
 
 describe('/rest/user/change-password', () => {
-  it('GET password change for newly created user with recognized token as Authorization header', () => {
+  it('POST password change for newly created user with recognized token as Authorization header', () => {
     return frisby.post(API_URL + '/Users', {
       headers: jsonHeader,
       body: {
@@ -31,15 +31,16 @@ describe('/rest/user/change-password', () => {
         })
           .expect('status', 200)
           .then(({ json }) => {
-            return frisby.get(REST_URL + '/user/change-password?current=kunigunde&new=foo&repeat=foo', {
-              headers: { Authorization: 'Bearer ' + json.authentication.token }
+            return frisby.post(REST_URL + '/user/change-password', {
+              headers: { ...jsonHeader, Authorization: 'Bearer ' + json.authentication.token },
+              body: { current: 'kunigunde', new: 'foo', repeat: 'foo' }
             })
               .expect('status', 200)
           })
       })
   })
 
-  it('GET password change with passing wrong current password', () => {
+  it('POST password change with passing wrong current password', () => {
     return frisby.post(REST_URL + '/user/login', {
       headers: jsonHeader,
       body: {
@@ -49,43 +50,56 @@ describe('/rest/user/change-password', () => {
     })
       .expect('status', 200)
       .then(({ json }) => {
-        return frisby.get(REST_URL + '/user/change-password?current=definetely_wrong&new=blubb&repeat=blubb', {
-          headers: { Authorization: 'Bearer ' + json.authentication.token }
+        return frisby.post(REST_URL + '/user/change-password', {
+          headers: { ...jsonHeader, Authorization: 'Bearer ' + json.authentication.token },
+          body: { current: 'definetely_wrong', new: 'blubb', repeat: 'blubb' }
         })
           .expect('status', 401)
           .expect('bodyContains', 'Current password is not correct')
       })
   })
 
-  it('GET password change without passing any passwords', () => {
-    return frisby.get(REST_URL + '/user/change-password')
+  it('POST password change without passing any passwords', () => {
+    return frisby.post(REST_URL + '/user/change-password', {
+      headers: jsonHeader,
+      body: {}
+    })
       .expect('status', 401)
       .expect('bodyContains', 'Password cannot be empty')
   })
 
-  it('GET password change with passing wrong repeated password', () => {
-    return frisby.get(REST_URL + '/user/change-password?new=foo&repeat=bar')
+  it('POST password change with passing wrong repeated password', () => {
+    return frisby.post(REST_URL + '/user/change-password', {
+      headers: jsonHeader,
+      body: { new: 'foo', repeat: 'bar' }
+    })
       .expect('status', 401)
       .expect('bodyContains', 'New and repeated password do not match')
   })
 
-  it('GET password change without passing an authorization token', () => {
-    return frisby.get(REST_URL + '/user/change-password?new=foo&repeat=foo')
+  it('POST password change without passing an authorization token', () => {
+    return frisby.post(REST_URL + '/user/change-password', {
+      headers: jsonHeader,
+      body: { new: 'foo', repeat: 'foo' }
+    })
       .expect('status', 500)
       .expect('header', 'content-type', /text\/html/)
       .expect('bodyContains', '<h1>' + config.get<string>('application.name') + ' (Express')
       .expect('bodyContains', 'Error: Blocked illegal activity')
   })
 
-  it('GET password change with passing unrecognized authorization token', () => {
-    return frisby.get(REST_URL + '/user/change-password?new=foo&repeat=foo', { headers: { Authorization: 'Bearer unknown' } })
+  it('POST password change with passing unrecognized authorization token', () => {
+    return frisby.post(REST_URL + '/user/change-password', {
+      headers: { ...jsonHeader, Authorization: 'Bearer unknown' },
+      body: { new: 'foo', repeat: 'foo' }
+    })
       .expect('status', 500)
       .expect('header', 'content-type', /text\/html/)
       .expect('bodyContains', '<h1>' + config.get<string>('application.name') + ' (Express')
       .expect('bodyContains', 'Error: Blocked illegal activity')
   })
 
-  it('GET password change for Bender without current password using GET request', () => {
+  it('POST password change for Bender without current password', () => {
     return frisby.post(REST_URL + '/user/login', {
       headers: jsonHeader,
       body: {
@@ -95,8 +109,9 @@ describe('/rest/user/change-password', () => {
     })
       .expect('status', 200)
       .then(({ json }) => {
-        return frisby.get(REST_URL + '/user/change-password?new=slurmCl4ssic&repeat=slurmCl4ssic', {
-          headers: { Authorization: 'Bearer ' + json.authentication.token }
+        return frisby.post(REST_URL + '/user/change-password', {
+          headers: { ...jsonHeader, Authorization: 'Bearer ' + json.authentication.token },
+          body: { new: 'slurmCl4ssic', repeat: 'slurmCl4ssic' }
         })
           .expect('status', 200)
       })
