@@ -235,6 +235,21 @@ export function process () {
 }
 
 async function getUserFromJwt (token: string): Promise<User | null> {
+  // Validate algorithm to prevent algorithm confusion attacks
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+      if (header.alg !== 'RS256') {
+        return null;
+      }
+    } else {
+      return null;
+    }
+  } catch (err) {
+    return null;
+  }
+  
   return await new Promise((resolve) => {
     jwt.verify(token, security.publicKey, (err: VerifyErrors | null, decoded: JwtPayload | string | undefined) => {
       if (err !== null || !decoded || isString(decoded)) {
