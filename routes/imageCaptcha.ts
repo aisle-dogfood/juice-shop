@@ -47,8 +47,13 @@ export const verifyImageCaptcha = () => (req: Request, res: Response, next: Next
     },
     order: [['createdAt', 'DESC']]
   }).then(captchas => {
-    if (!captchas[0] || req.body.answer === captchas[0].answer) {
-      next()
+    if (captchas[0] && req.body.answer === captchas[0].answer) {
+      // Invalidate the CAPTCHA after successful use to prevent replay attacks
+      captchas[0].destroy().then(() => {
+        next()
+      }).catch(() => {
+        res.status(401).send(res.__('Something went wrong while submitting CAPTCHA. Please try again.'))
+      })
     } else {
       res.status(401).send(res.__('Wrong answer to CAPTCHA. Please try again.'))
     }
