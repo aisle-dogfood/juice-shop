@@ -21,7 +21,9 @@
 
           <ng-container matColumnDef="email">
             <mat-header-cell *matHeaderCellDef translate></mat-header-cell>
-            <mat-cell *matCellDef="let user" [innerHTML]="user.email" style="vertical-align: middle"></mat-cell>
+            <mat-cell *matCellDef="let user" style="vertical-align: middle">
+              <span [class.confirmation]="doesUserHaveAnActiveSession(user)" [class.error]="!doesUserHaveAnActiveSession(user)">{{user.email}}</span>
+            </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="user_detail">
