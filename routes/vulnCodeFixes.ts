@@ -55,6 +55,15 @@ interface VerdictRequestBody {
 
 export const serveCodeFixes = () => (req: Request<FixesRequestParams, Record<string, unknown>, Record<string, unknown>>, res: Response, next: NextFunction) => {
   const key = req.params.key
+  
+  // Prevent prototype pollution by rejecting dangerous property names
+  if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    res.status(400).json({
+      error: 'Invalid key'
+    })
+    return
+  }
+  
   const fixData = readFixes(key)
   if (fixData.fixes.length === 0) {
     res.status(404).json({
@@ -70,6 +79,15 @@ export const serveCodeFixes = () => (req: Request<FixesRequestParams, Record<str
 export const checkCorrectFix = () => async (req: Request<Record<string, unknown>, Record<string, unknown>, VerdictRequestBody>, res: Response, next: NextFunction) => {
   const key = req.body.key
   const selectedFix = req.body.selectedFix
+  
+  // Prevent prototype pollution by rejecting dangerous property names
+  if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    res.status(400).json({
+      error: 'Invalid key'
+    })
+    return
+  }
+  
   const fixData = readFixes(key)
   if (fixData.fixes.length === 0) {
     res.status(404).json({
