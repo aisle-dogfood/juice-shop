@@ -8,8 +8,17 @@ interface Token {
 }
 
 contract BeeFaucet {
-    Token public token = Token(0x36435796Ca9be2bf150CE0dECc2D8Fab5C4d6E13);
+    Token public token;
     uint8 public balance = 200;
+
+    /// @notice Constructor to initialize the faucet with a token address
+    /// @param _tokenAddress The address of the ERC20 token contract
+    /// @dev Token address should be provided based on the deployment environment
+    ///      Example testnet addresses should be documented in deployment scripts
+    constructor(address _tokenAddress) {
+        require(_tokenAddress != address(0), "Token address cannot be zero");
+        token = Token(_tokenAddress);
+    }
 
     function withdraw(uint8 amount) public {
         balance -= amount;
