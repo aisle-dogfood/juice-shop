@@ -54,15 +54,10 @@ export function getUserProfile () {
 
     if (username?.match(/#{(.*)}/) !== null && utils.isChallengeEnabled(challenges.usernameXssChallenge)) {
       req.app.locals.abused_ssti_bug = true
-      const code = username?.substring(2, username.length - 1)
-      try {
-        if (!code) {
-          throw new Error('Username is null')
-        }
-        username = eval(code) // eslint-disable-line no-eval
-      } catch (err) {
-        username = '\\' + username
-      }
+      // Extract the content from the template marker without evaluating it
+      const content = username?.substring(2, username.length - 1)
+      // Use the content as-is without eval to prevent arbitrary code execution
+      username = content || ('\\' + username)
     } else {
       username = '\\' + username
     }
