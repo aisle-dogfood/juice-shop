@@ -52,6 +52,7 @@ import logger from './lib/logger'
 import * as utils from './lib/utils'
 import * as antiCheat from './lib/antiCheat'
 import * as security from './lib/insecurity'
+import * as csrf from './lib/csrf'
 import validateConfig from './lib/startup/validateConfig'
 import cleanupFtpFolder from './lib/startup/cleanupFtpFolder'
 import customizeEasterEgg from './lib/startup/customizeEasterEgg' // vuln-code-snippet hide-line
@@ -286,6 +287,9 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.use(cookieParser('kekse'))
   // vuln-code-snippet end directoryListingChallenge accessLogDisclosureChallenge
 
+  /* CSRF Protection */
+  app.use(csrf.csrfProtection())
+
   /* Configure and enable backend-side i18n */
   i18n.configure({
     locales: locales.map((locale: { key: string }) => locale.key),
@@ -338,6 +342,8 @@ restoreOverwrittenFilesWithOriginals().then(() => {
     keyGenerator ({ headers, ip }: { headers: any, ip: any }) { return headers['X-Forwarded-For'] ?? ip } // vuln-code-snippet vuln-line resetPasswordMortyChallenge
   }))
   // vuln-code-snippet end resetPasswordMortyChallenge
+
+
 
   // vuln-code-snippet start changeProductChallenge
   /** Authorization **/
@@ -569,6 +575,9 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   }
 
   /* Custom Restful API */
+  app.get('/rest/csrf-token', (req: Request, res: Response) => {
+    res.json({ token: csrf.getCsrfToken(req) })
+  })
   app.post('/rest/user/login', login())
   app.get('/rest/user/change-password', changePassword())
   app.post('/rest/user/reset-password', resetPassword())
@@ -639,7 +648,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
 
   /* Routes for profile page */
   app.get('/profile', security.updateAuthenticatedUsers(), getUserProfile())
-  app.post('/profile', updateUserProfile())
+  app.post('/profile', csrf.validateCsrfToken(), updateUserProfile())
 
   /* Route for vulnerable code snippets */
   app.get('/snippets', serveChallengesWithCodeSnippet())
