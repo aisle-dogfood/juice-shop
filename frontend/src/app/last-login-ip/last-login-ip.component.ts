@@ -4,7 +4,6 @@
  */
 
 import { Component } from '@angular/core'
-import { DomSanitizer } from '@angular/platform-browser'
 import * as jwtDecode from 'jwt-decode'
 import { TranslateModule } from '@ngx-translate/core'
 import { MatCardModule } from '@angular/material/card'
@@ -18,7 +17,7 @@ import { MatCardModule } from '@angular/material/card'
 
 export class LastLoginIpComponent {
   lastLoginIp: any = '?'
-  constructor (private readonly sanitizer: DomSanitizer) {}
+  constructor () {}
 
   ngOnInit (): void {
     try {
@@ -34,8 +33,7 @@ export class LastLoginIpComponent {
     if (token) {
       payload = jwtDecode(token)
       if (payload.data.lastLoginIp) {
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        this.lastLoginIp = this.sanitizer.bypassSecurityTrustHtml(`<small>${payload.data.lastLoginIp}</small>`)
+        this.lastLoginIp = payload.data.lastLoginIp
       }
     }
   }
