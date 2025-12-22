@@ -124,7 +124,7 @@ describe('ChallengeSolvedNotificationComponent', () => {
     component.saveProgress()
     expires.setFullYear(expires.getFullYear() + 1)
 
-    expect(cookieService.put).toHaveBeenCalledWith('continueCode', '12345', { expires })
+    expect(cookieService.put).toHaveBeenCalledWith('continueCode', '12345', { expires, secure: true, sameSite: 'strict' })
   })
 
   it('should throw error when not supplied with a valid continue code', () => {
