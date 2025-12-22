@@ -260,7 +260,12 @@ async function createMemories () {
       if (utils.isUrl(memory.image)) {
         const imageUrl = memory.image
         tmpImageFileName = utils.extractFilename(memory.image)
-        void utils.downloadToFile(imageUrl, 'frontend/dist/frontend/assets/public/images/uploads/' + tmpImageFileName)
+        try {
+          await utils.downloadToFile(imageUrl, 'frontend/dist/frontend/assets/public/images/uploads/' + tmpImageFileName)
+        } catch (err) {
+          logger.error(`Failed to download memory image from ${imageUrl}: ${utils.getErrorMessage(err)}`)
+          return // Skip this memory if download fails
+        }
       }
       if (memory.geoStalkingMetaSecurityQuestion && memory.geoStalkingMetaSecurityAnswer) {
         await createSecurityAnswer(datacache.users.john.id, memory.geoStalkingMetaSecurityQuestion, memory.geoStalkingMetaSecurityAnswer)
@@ -294,18 +299,30 @@ async function createMemories () {
 }
 
 async function createProducts () {
-  const products = structuredClone(config.get<ProductConfig[]>('products')).map((product) => {
+  const productsConfig = structuredClone(config.get<ProductConfig[]>('products'))
+  
+  // Download product images first (in parallel) before processing products
+  await Promise.all(productsConfig.map(async (product) => {
+    if (product.image && utils.isUrl(product.image)) {
+      const imageUrl = product.image
+      const imageFileName = utils.extractFilename(product.image)
+      try {
+        await utils.downloadToFile(imageUrl, 'frontend/dist/frontend/assets/public/images/products/' + imageFileName)
+        product.image = imageFileName
+      } catch (err) {
+        logger.error(`Failed to download product image from ${imageUrl}: ${utils.getErrorMessage(err)}`)
+        product.image = 'undefined.png' // Fallback to default image
+      }
+    }
+  }))
+  
+  const products = productsConfig.map((product) => {
     product.price = product.price ?? Math.floor(Math.random() * 9 + 1)
     product.deluxePrice = product.deluxePrice ?? product.price
     product.description = product.description || 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit.'
 
     // set default image values
     product.image = product.image ?? 'undefined.png'
-    if (utils.isUrl(product.image)) {
-      const imageUrl = product.image
-      product.image = utils.extractFilename(product.image)
-      void utils.downloadToFile(imageUrl, 'frontend/dist/frontend/assets/public/images/products/' + product.image)
-    }
     return product
   })
 
@@ -332,9 +349,16 @@ async function createProducts () {
     if (utils.isUrl(blueprint)) {
       const blueprintUrl = blueprint
       blueprint = utils.extractFilename(blueprint)
-      await utils.downloadToFile(blueprintUrl, 'frontend/dist/frontend/assets/public/images/products/' + blueprint)
+      try {
+        await utils.downloadToFile(blueprintUrl, 'frontend/dist/frontend/assets/public/images/products/' + blueprint)
+        datacache.setRetrieveBlueprintChallengeFile(blueprint)
+      } catch (err) {
+        logger.error(`Failed to download blueprint from ${blueprintUrl}: ${utils.getErrorMessage(err)}`)
+        // Don't set the blueprint file if download fails
+      }
+    } else {
+      datacache.setRetrieveBlueprintChallengeFile(blueprint)
     }
-    datacache.setRetrieveBlueprintChallengeFile(blueprint)
   }
 
   return await Promise.all(

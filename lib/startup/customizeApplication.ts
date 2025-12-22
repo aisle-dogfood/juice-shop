@@ -75,7 +75,12 @@ const retrieveCustomFile = async (sourceProperty: string, destinationFolder: str
   if (utils.isUrl(file)) {
     const filePath = file
     file = utils.extractFilename(file)
-    await utils.downloadToFile(filePath, destinationFolder + '/' + file)
+    try {
+      await utils.downloadToFile(filePath, destinationFolder + '/' + file)
+    } catch (err) {
+      logger.error(`Failed to download custom file from ${filePath}: ${utils.getErrorMessage(err)}`)
+      throw err // Re-throw to let caller handle
+    }
   }
   return file
 }

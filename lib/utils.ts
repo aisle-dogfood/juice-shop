@@ -13,6 +13,9 @@ import download from 'download'
 import crypto from 'node:crypto'
 import clarinet from 'clarinet'
 import type { Challenge } from 'data/types'
+import path from 'node:path'
+import { promisify } from 'node:util'
+import dns from 'node:dns'
 
 import isHeroku from './is-heroku'
 import isDocker from './is-docker'
@@ -21,6 +24,8 @@ export { default as isDocker } from './is-docker'
 export { default as isWindows } from './is-windows'
 // import isGitpod from 'is-gitpod') // FIXME Roll back to this when https://github.com/dword-design/is-gitpod/issues/94 is resolve
 const isGitpod = () => false
+
+const dnsLookup = promisify(dns.lookup)
 
 const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
@@ -118,12 +123,152 @@ export const extractFilename = (url: string) => {
   return file
 }
 
+/**
+ * Validates if a URL is safe for server-side downloads
+ * Blocks dangerous schemes, private IPs, localhost, and cloud metadata endpoints
+ */
+const isUrlSafeForDownload = async (urlString: string): Promise<boolean> => {
+  try {
+    const url = new URL(urlString)
+    
+    // Only allow http and https schemes
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      logger.warn(`Blocked download attempt with invalid scheme: ${url.protocol}`)
+      return false
+    }
+
+    // Block dangerous hostnames
+    const hostname = url.hostname.toLowerCase()
+    const blockedHostnames = [
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      '0.0.0.0',
+      '169.254.169.254', // AWS metadata endpoint
+      'metadata.google.internal' // GCP metadata endpoint
+    ]
+    
+    if (blockedHostnames.includes(hostname)) {
+      logger.warn(`Blocked download attempt to dangerous hostname: ${hostname}`)
+      return false
+    }
+
+    // Check for private IP ranges
+    try {
+      const { address } = await dnsLookup(hostname)
+      
+      // Block localhost and loopback
+      if (address === '127.0.0.1' || address === '::1') {
+        logger.warn(`Blocked download attempt to loopback address: ${address}`)
+        return false
+      }
+      
+      // Block private IPv4 ranges (RFC1918)
+      const ipv4Parts = address.split('.')
+      if (ipv4Parts.length === 4) {
+        const firstOctet = parseInt(ipv4Parts[0])
+        const secondOctet = parseInt(ipv4Parts[1])
+        
+        // 10.0.0.0/8
+        if (firstOctet === 10) {
+          logger.warn(`Blocked download attempt to private IP range (10.0.0.0/8): ${address}`)
+          return false
+        }
+        
+        // 172.16.0.0/12
+        if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) {
+          logger.warn(`Blocked download attempt to private IP range (172.16.0.0/12): ${address}`)
+          return false
+        }
+        
+        // 192.168.0.0/16
+        if (firstOctet === 192 && secondOctet === 168) {
+          logger.warn(`Blocked download attempt to private IP range (192.168.0.0/16): ${address}`)
+          return false
+        }
+        
+        // 169.254.0.0/16 (link-local)
+        if (firstOctet === 169 && secondOctet === 254) {
+          logger.warn(`Blocked download attempt to link-local address: ${address}`)
+          return false
+        }
+      }
+      
+      // Block IPv6 link-local and unique local addresses
+      if (address.includes(':')) {
+        const lowerAddress = address.toLowerCase()
+        // fe80::/10 (link-local)
+        // fc00::/7 (unique local)
+        if (lowerAddress.startsWith('fe80:') || lowerAddress.startsWith('fc') || lowerAddress.startsWith('fd')) {
+          logger.warn(`Blocked download attempt to private IPv6 address: ${address}`)
+          return false
+        }
+      }
+    } catch (err) {
+      logger.warn(`DNS lookup failed for ${hostname}: ${getErrorMessage(err)}`)
+      return false
+    }
+
+    return true
+  } catch (err) {
+    logger.warn(`Invalid URL format: ${urlString}`)
+    return false
+  }
+}
+
+/**
+ * Sanitizes a filename to prevent path traversal attacks
+ */
+const sanitizeFilename = (filename: string): string => {
+  // Remove any path components
+  const basename = path.basename(filename)
+  // Remove null bytes and other dangerous characters
+  return basename.replace(/[^\w\s.-]/g, '_')
+}
+
 export const downloadToFile = async (url: string, dest: string) => {
   try {
-    const data = await download(url)
-    fs.writeFileSync(dest, data)
+    // Validate URL is safe for download
+    if (!await isUrlSafeForDownload(url)) {
+      throw new Error(`URL validation failed for security reasons: ${url}`)
+    }
+
+    // Sanitize the destination path to prevent path traversal
+    const destDir = path.dirname(dest)
+    const destFilename = path.basename(dest)
+    const sanitizedFilename = sanitizeFilename(destFilename)
+    const sanitizedDest = path.join(destDir, sanitizedFilename)
+
+    // Ensure the sanitized path is still under the intended directory
+    const resolvedDest = path.resolve(sanitizedDest)
+    const resolvedDestDir = path.resolve(destDir)
+    if (!resolvedDest.startsWith(resolvedDestDir)) {
+      throw new Error(`Path traversal attempt detected: ${dest}`)
+    }
+
+    // Download with timeout (30 seconds)
+    const downloadOptions = {
+      timeout: 30000, // 30 second timeout
+      // Note: download package doesn't support maxRedirects directly, but has built-in redirect handling
+    }
+    
+    const data = await download(url, undefined, downloadOptions)
+    
+    // Check file size limit (10MB)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (data.length > maxSize) {
+      throw new Error(`Downloaded file exceeds maximum size limit (10MB): ${data.length} bytes`)
+    }
+
+    // Write to temporary file first, then rename atomically
+    const tempDest = sanitizedDest + '.tmp'
+    fs.writeFileSync(tempDest, data)
+    fs.renameSync(tempDest, sanitizedDest)
+    
+    logger.info(`Successfully downloaded ${url} to ${sanitizedDest}`)
   } catch (err) {
     logger.warn('Failed to download ' + url + ' (' + getErrorMessage(err) + ')')
+    throw err // Re-throw to allow caller to handle
   }
 }
 

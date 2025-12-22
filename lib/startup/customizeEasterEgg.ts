@@ -5,6 +5,7 @@
 
 import config from 'config'
 import * as utils from '../utils'
+import logger from '../logger'
 // @ts-expect-error FIXME due to non-existing type definitions for replace
 import replace from 'replace'
 
@@ -14,7 +15,12 @@ const customizeEasterEgg = async () => {
     if (utils.isUrl(overlay)) {
       const overlayPath = overlay
       overlay = utils.extractFilename(overlay)
-      await utils.downloadToFile(overlayPath, 'frontend/dist/frontend/assets/private/' + overlay)
+      try {
+        await utils.downloadToFile(overlayPath, 'frontend/dist/frontend/assets/private/' + overlay)
+      } catch (err) {
+        logger.error(`Failed to download easter egg overlay from ${overlayPath}: ${utils.getErrorMessage(err)}`)
+        throw err // Re-throw to let caller handle
+      }
     }
     replaceImagePath(overlay)
   }
