@@ -7,6 +7,48 @@ import { type Request, type Response, type NextFunction } from 'express'
 import { type Captcha } from '../data/types'
 import { CaptchaModel } from '../models/captcha'
 
+function safeCalculate (firstTerm: number, firstOperator: string, secondTerm: number, secondOperator: string, thirdTerm: number): number {
+  // Calculate the expression following proper order of operations
+  // First, handle multiplication operations
+  let result: number
+  let tempFirst = firstTerm
+  let tempThird = thirdTerm
+  
+  if (firstOperator === '*') {
+    tempFirst = firstTerm * secondTerm
+    result = tempFirst
+    if (secondOperator === '*') {
+      result = tempFirst * thirdTerm
+    } else if (secondOperator === '+') {
+      result = tempFirst + thirdTerm
+    } else { // '-'
+      result = tempFirst - thirdTerm
+    }
+  } else if (secondOperator === '*') {
+    tempThird = secondTerm * thirdTerm
+    if (firstOperator === '+') {
+      result = firstTerm + tempThird
+    } else { // '-'
+      result = firstTerm - tempThird
+    }
+  } else {
+    // No multiplication, evaluate left to right
+    if (firstOperator === '+') {
+      tempFirst = firstTerm + secondTerm
+    } else { // '-'
+      tempFirst = firstTerm - secondTerm
+    }
+    
+    if (secondOperator === '+') {
+      result = tempFirst + thirdTerm
+    } else { // '-'
+      result = tempFirst - thirdTerm
+    }
+  }
+  
+  return result
+}
+
 export function captchas () {
   return async (req: Request, res: Response) => {
     const captchaId = req.app.locals.captchaId++
@@ -20,7 +62,7 @@ export function captchas () {
     const secondOperator = operators[Math.floor((Math.random() * 3))]
 
     const expression = firstTerm.toString() + firstOperator + secondTerm.toString() + secondOperator + thirdTerm.toString()
-    const answer = eval(expression).toString() // eslint-disable-line no-eval
+    const answer = safeCalculate(firstTerm, firstOperator, secondTerm, secondOperator, thirdTerm).toString()
 
     const captcha = {
       captchaId,
