@@ -4,7 +4,6 @@
  */
 
 import { Component } from '@angular/core'
-import { DomSanitizer } from '@angular/platform-browser'
 import * as jwtDecode from 'jwt-decode'
 import { TranslateModule } from '@ngx-translate/core'
 import { MatCardModule } from '@angular/material/card'
@@ -17,8 +16,8 @@ import { MatCardModule } from '@angular/material/card'
 })
 
 export class LastLoginIpComponent {
-  lastLoginIp: any = '?'
-  constructor (private readonly sanitizer: DomSanitizer) {}
+  lastLoginIp: string = '?'
+  constructor () {}
 
   ngOnInit (): void {
     try {
@@ -34,9 +33,30 @@ export class LastLoginIpComponent {
     if (token) {
       payload = jwtDecode(token)
       if (payload.data.lastLoginIp) {
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        this.lastLoginIp = this.sanitizer.bypassSecurityTrustHtml(`<small>${payload.data.lastLoginIp}</small>`)
+        // Validate IP format before using - basic IPv4/IPv6 check
+        const ipValue = String(payload.data.lastLoginIp)
+        if (this.isValidIpFormat(ipValue)) {
+          this.lastLoginIp = ipValue
+        }
       }
     }
+  }
+
+  private isValidIpFormat (ip: string): boolean {
+    // IPv4 format: xxx.xxx.xxx.xxx
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/
+    // IPv6 format: basic validation
+    const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/
+    
+    if (ipv4Regex.test(ip)) {
+      // Validate each octet is 0-255
+      const octets = ip.split('.')
+      return octets.every(octet => {
+        const num = parseInt(octet, 10)
+        return num >= 0 && num <= 255
+      })
+    }
+    
+    return ipv6Regex.test(ip)
   }
 }
