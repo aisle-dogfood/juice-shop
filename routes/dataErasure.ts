@@ -59,10 +59,20 @@ router.post('/', async (req: Request<Record<string, unknown>, Record<string, unk
   }
 
   try {
-    await PrivacyRequestModel.create({
-      UserId: loggedInUser.data.id,
-      deletionRequested: true
+    // Check if a privacy request already exists for this user to prevent resource exhaustion
+    const existingRequest = await PrivacyRequestModel.findOne({
+      where: {
+        UserId: loggedInUser.data.id
+      }
     })
+
+    // Only create a new request if one doesn't already exist
+    if (!existingRequest) {
+      await PrivacyRequestModel.create({
+        UserId: loggedInUser.data.id,
+        deletionRequested: true
+      })
+    }
 
     res.clearCookie('token')
     if (req.body.layout) {
