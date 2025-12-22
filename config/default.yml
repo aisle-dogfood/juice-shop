@@ -2,6 +2,7 @@ server:
   port: 3000
   basePath: ''
   baseUrl: 'http://localhost:3000' # used for CSAF, e.g. https://example.com
+  enableDirectoryBrowsing: false # Disable directory browsing for production security; set to true only for CTF/training environments
 application:
   domain: juice-sh.op # for pre-loaded email users
   name: 'OWASP Juice Shop'

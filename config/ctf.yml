@@ -1,3 +1,5 @@
+server:
+  enableDirectoryBrowsing: true # Enable for CTF challenges
 application:
   logo: JuiceShopCTF_Logo.png
   favicon: favicon_ctf.ico

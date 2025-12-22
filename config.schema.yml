@@ -5,6 +5,8 @@ server:
     type: string
   baseUrl:
     type: string
+  enableDirectoryBrowsing:
+    type: boolean
 application:
   domain:
     type: string

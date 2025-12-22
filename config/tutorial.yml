@@ -1,2 +1,4 @@
+server:
+  enableDirectoryBrowsing: true # Enable for tutorial challenges
 challenges:
   restrictToTutorialsFirst: true

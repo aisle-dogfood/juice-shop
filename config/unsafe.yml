@@ -1,2 +1,4 @@
+server:
+  enableDirectoryBrowsing: true # Enable for intentional vulnerabilities
 challenges:
   safetyMode: disabled
