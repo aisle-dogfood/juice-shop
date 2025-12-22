@@ -28,7 +28,7 @@ const replaceImagePath = (overlay: string) => {
   replace({
     regex: /orangeTexture = .*;/,
     replacement: textureDeclaration,
-    paths: ['frontend/dist/frontend/assets/private/threejs-demo.html'],
+    paths: ['frontend/dist/frontend/assets/private/threejs-demo.js'],
     recursive: false,
     silent: true
   })

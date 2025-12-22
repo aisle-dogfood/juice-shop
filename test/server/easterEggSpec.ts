@@ -18,7 +18,7 @@ describe('easterEgg', () => {
   let save: any
 
   beforeEach(() => {
-    res = { sendFile: sinon.spy() }
+    res = { sendFile: sinon.spy(), set: sinon.spy() }
     req = {}
     save = () => ({
       then () { }
@@ -37,5 +37,13 @@ describe('easterEgg', () => {
     serveEasterEgg()(req, res)
 
     expect(challenges.easterEggLevelTwoChallenge.solved).to.equal(true)
+  })
+
+  it('should set Content-Security-Policy header', () => {
+    serveEasterEgg()(req, res)
+
+    expect(res.set).to.have.been.calledWith(sinon.match({
+      'Content-Security-Policy': sinon.match(/default-src 'self'/)
+    }))
   })
 })
