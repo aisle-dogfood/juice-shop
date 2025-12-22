@@ -50,6 +50,46 @@ const hmac_key = "pa4qacea4VK9t9nGv7yZtwmj";
 export const hmac = (data: string) =>
   crypto.createHmac("sha256", hmac_key).update(data).digest("hex");
 
+/**
+ * Securely hash a password using scrypt with a random salt
+ * @param password - The clear text password to hash
+ * @returns A string in the format "salt:hash" where both are hex-encoded
+ */
+export const hashPassword = (password: string): string => {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+};
+
+/**
+ * Verify a password against a stored hash
+ * Supports both new scrypt hashes and legacy MD5 hashes for migration
+ * @param password - The clear text password to verify
+ * @param storedHash - The stored hash (either "salt:hash" format or legacy MD5)
+ * @returns true if password matches, false otherwise
+ */
+export const verifyPassword = (password: string, storedHash: string): boolean => {
+  // Check if this is a legacy MD5 hash (doesn't contain ':')
+  if (!storedHash.includes(':')) {
+    // Legacy MD5 hash - verify using MD5
+    return hash(password) === storedHash;
+  }
+  
+  // New scrypt hash format: "salt:hash"
+  const [salt, originalHash] = storedHash.split(':');
+  const passwordHash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return passwordHash === originalHash;
+};
+
+/**
+ * Check if a stored hash is using the legacy MD5 format
+ * @param storedHash - The stored password hash
+ * @returns true if this is a legacy MD5 hash
+ */
+export const isLegacyPasswordHash = (storedHash: string): boolean => {
+  return !storedHash.includes(':');
+};
+
 export const cutOffPoisonNullByte = (str: string) => {
   const nullByte = "%00";
   if (utils.contains(str, nullByte)) {
