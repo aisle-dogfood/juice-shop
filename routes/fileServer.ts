@@ -30,7 +30,22 @@ export function servePublicFiles () {
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
-      res.sendFile(path.resolve('ftp/', file))
+      // Prevent path traversal by validating the resolved path is within the base directory
+      const baseDir = path.resolve('ftp/')
+      const filePath = path.resolve('ftp/', file)
+      
+      // Normalize both paths to handle different path separators and resolve any '..' sequences
+      const normalizedBase = path.normalize(baseDir + path.sep)
+      const normalizedPath = path.normalize(filePath + path.sep)
+      
+      // Verify the resolved path starts with the base directory
+      if (!normalizedPath.startsWith(normalizedBase)) {
+        res.status(403)
+        next(new Error('Access denied: Path traversal detected!'))
+        return
+      }
+
+      res.sendFile(filePath)
     } else {
       res.status(403)
       next(new Error('Only .md and .pdf files are allowed!'))
