@@ -40,6 +40,7 @@ import { FlexModule } from '@angular/flex-layout/flex'
 import { MatDivider } from '@angular/material/divider'
 import { PaymentMethodComponent } from '../payment-method/payment-method.component'
 import { MatCardModule } from '@angular/material/card'
+import { SafeAnchorPipe } from '../safe-anchor.pipe'
 
 library.add(faCartArrowDown, faGift, faHeart, faLeanpub, faThumbsUp, faTshirt, faStickyNote, faHandHoldingUsd, faCoffee, faTimes, faStripe, faPalette)
 
@@ -47,7 +48,7 @@ library.add(faCartArrowDown, faGift, faHeart, faLeanpub, faThumbsUp, faTshirt, f
   selector: 'app-payment',
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.scss'],
-  imports: [MatCardModule, PaymentMethodComponent, MatDivider, NgIf, FlexModule, TranslateModule, MatButtonModule, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle, MatExpansionPanelDescription, MatFormFieldModule, MatLabel, MatHint, MatInputModule, FormsModule, ReactiveFormsModule, MatError, MatIconModule]
+  imports: [MatCardModule, PaymentMethodComponent, MatDivider, NgIf, FlexModule, TranslateModule, MatButtonModule, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle, MatExpansionPanelDescription, MatFormFieldModule, MatLabel, MatHint, MatInputModule, FormsModule, ReactiveFormsModule, MatError, MatIconModule, SafeAnchorPipe]
 })
 export class PaymentComponent implements OnInit {
   public couponConfirmation: any

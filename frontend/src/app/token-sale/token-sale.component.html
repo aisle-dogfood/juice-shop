@@ -12,7 +12,7 @@
           <mat-card-title>
             {{'TITLE_TOKENSALE' | translate}}
           </mat-card-title>
-          <mat-card-subtitle [innerHtml]="'SECTION_ICO' | translate:{juicycoin: altcoinName}"></mat-card-subtitle>
+          <mat-card-subtitle [innerHtml]="('SECTION_ICO' | translate:{juicycoin: altcoinName}) | safeAnchor"></mat-card-subtitle>
         </mat-card-header>
         <div class="divider"></div>
         <mat-card appearance="outlined" class="mat-elevation-z6">
@@ -97,7 +97,7 @@
 
         <mat-card appearance="outlined" class="mat-elevation-z6">
           <div class="mdc-card">
-            <h5><i class='fas fa-comments fa-2x'></i> <span style="margin-left: 10px;" [innerHtml]="'ICO_FAQ_QUESTION' | translate:{juicycoin: altcoinName}"></span></h5>
+            <h5><i class='fas fa-comments fa-2x'></i> <span style="margin-left: 10px;" [innerHtml]="('ICO_FAQ_QUESTION' | translate:{juicycoin: altcoinName}) | safeAnchor"></span></h5>
             <small class="text-justify">{{"ICO_FAQ_ANSWER" | translate}}</small>
           </div>
         </mat-card>

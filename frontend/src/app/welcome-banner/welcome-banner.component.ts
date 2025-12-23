@@ -13,12 +13,13 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatTooltip } from '@angular/material/tooltip'
 import { MatButtonModule } from '@angular/material/button'
 import { NgIf } from '@angular/common'
+import { SafeAnchorPipe } from '../safe-anchor.pipe'
 
 @Component({
   selector: 'app-welcome-banner',
   templateUrl: 'welcome-banner.component.html',
   styleUrls: ['./welcome-banner.component.scss'],
-  imports: [NgIf, MatButtonModule, MatTooltip, MatIconModule, ExtendedModule, TranslateModule]
+  imports: [NgIf, MatButtonModule, MatTooltip, MatIconModule, ExtendedModule, TranslateModule, SafeAnchorPipe]
 })
 export class WelcomeBannerComponent implements OnInit {
   public title: string = 'Welcome to OWASP Juice Shop'

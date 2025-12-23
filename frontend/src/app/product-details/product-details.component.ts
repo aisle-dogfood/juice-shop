@@ -25,6 +25,7 @@ import { MatDivider } from '@angular/material/divider'
 import { MatTooltip } from '@angular/material/tooltip'
 import { NgIf, NgFor, AsyncPipe } from '@angular/common'
 import { FlexModule } from '@angular/flex-layout/flex'
+import { SafeAnchorPipe } from '../safe-anchor.pipe'
 
 library.add(faPaperPlane, faArrowCircleLeft, faUserEdit, faThumbsUp, faCrown)
 
@@ -32,7 +33,7 @@ library.add(faPaperPlane, faArrowCircleLeft, faUserEdit, faThumbsUp, faCrown)
   selector: 'app-product-details',
   templateUrl: './product-details.component.html',
   styleUrls: ['./product-details.component.scss'],
-  imports: [MatDialogContent, FlexModule, NgIf, MatTooltip, MatDivider, MatButtonModule, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle, TranslateModule, NgFor, MatIconButton, MatIconModule, MatFormFieldModule, MatLabel, MatHint, MatInputModule, FormsModule, ReactiveFormsModule, MatDialogActions, MatDialogClose, AsyncPipe]
+  imports: [MatDialogContent, FlexModule, NgIf, MatTooltip, MatDivider, MatButtonModule, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle, TranslateModule, NgFor, MatIconButton, MatIconModule, MatFormFieldModule, MatLabel, MatHint, MatInputModule, FormsModule, ReactiveFormsModule, MatDialogActions, MatDialogClose, AsyncPipe, SafeAnchorPipe]
 })
 export class ProductDetailsComponent implements OnInit, OnDestroy {
   public author: string = 'Anonymous'
