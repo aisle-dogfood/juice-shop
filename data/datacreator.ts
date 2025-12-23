@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
+/*
+ * SECURITY NOTE: This module loads static seed data for development/testing.
+ * Production environment protection is enforced - the application will refuse
+ * to load hard-coded credentials when NODE_ENV=production.
+ * See data/static/SECURITY_README.md for details.
+ */
+
 /* jslint node: true */
 import { AddressModel } from '../models/address'
 import { BasketModel } from '../models/basket'
@@ -101,6 +108,20 @@ async function createChallenges () {
 }
 
 async function createUsers () {
+  // Security check: Prevent loading hard-coded credentials in production
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('Security Error: Refusing to load hard-coded seed user data in production environment!')
+    logger.error('The file data/static/users.yml contains plaintext passwords, admin credentials, TOTP secrets, and test credit card numbers.')
+    logger.error('For production use, configure users through a secure provisioning process.')
+    throw new Error('Cannot load seed data with hard-coded credentials in production environment')
+  }
+
+  // Log warning for non-production environments
+  if (process.env.NODE_ENV !== 'test') {
+    logger.warn('Loading seed user data with hard-coded credentials from data/static/users.yml')
+    logger.warn('This data should ONLY be used in development/test environments')
+  }
+
   const users = await loadStaticUserData()
 
   await Promise.all(
@@ -131,6 +152,12 @@ async function createUsers () {
 }
 
 async function createWallet () {
+  // Security check: Prevent loading hard-coded user data in production
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('Security Error: Refusing to load hard-coded seed user data in production environment!')
+    throw new Error('Cannot load seed data with hard-coded credentials in production environment')
+  }
+
   const users = await loadStaticUserData()
   return await Promise.all(
     users.map(async (user: StaticUser, index: number) => {

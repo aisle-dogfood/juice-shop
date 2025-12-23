@@ -1,3 +1,16 @@
+# ============================================================================
+# SECURITY WARNING: This file contains hard-coded credentials and secrets!
+# ============================================================================
+# This seed data is for DEVELOPMENT AND TESTING PURPOSES ONLY.
+# It contains:
+#   - Plaintext passwords
+#   - Admin roles with weak credentials
+#   - TOTP secrets
+#   - Test credit card numbers
+#
+# NEVER use this data in production environments!
+# The application will refuse to load this data if NODE_ENV=production
+# ============================================================================
 -
   email: admin
   password: 'admin123'
