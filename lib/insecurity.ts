@@ -46,7 +46,7 @@ const privateKey =
 
 export const hash = (data: string) =>
   crypto.createHash("md5").update(data).digest("hex");
-const hmac_key = "pa4qacea4VK9t9nGv7yZtwmj";
+const hmac_key = process.env.HMAC_KEY ?? "pa4qacea4VK9t9nGv7yZtwmj";
 export const hmac = (data: string) =>
   crypto.createHmac("sha256", hmac_key).update(data).digest("hex");
 
