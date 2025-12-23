@@ -7,7 +7,7 @@
     [difficulty]="challenge.difficulty"
   ></difficulty-stars>
 </div>
-<div class="description-row" [innerHtml]="challenge.description"></div>
+<div class="description-row" [innerHtml]="challenge.description | safeAnchor"></div>
 <div class="bottom-row">
   <div class="tags">
     <span *ngFor="let tag of challenge.tagList" class="tag" [matTooltip]="('TAG_' + tag?.toUpperCase().split(' ').join('_') + '_DESCRIPTION' | translate)">{{ tag }}</span>
