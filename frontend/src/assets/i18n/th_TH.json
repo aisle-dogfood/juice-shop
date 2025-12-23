@@ -78,7 +78,7 @@
   "INVALID_COUPON_LENGTH": "รหัสคูปองต้องมีความยาว {{length}} ตัวอักษร",
   "INVALID_COUPON": "รหัสคูปองไม่ถูกต้อง",
   "LABEL_COUPON": "คูปอง",
-  "FOLLOW_FOR_MONTHLY_COUPONS": "Need a coupon code? Follow us on <a href='{{blueSky}}' target='_blank'>BlueSky</a> or <a href='{{reddit}}' target='_blank'>Reddit</a> for monthly coupons and other spam!",
+  "FOLLOW_FOR_MONTHLY_COUPONS": "Need a coupon code? Follow us on <a href='{{blueSky}}' target='_blank' rel='noopener noreferrer'>BlueSky</a> or <a href='{{reddit}}' target='_blank' rel='noopener noreferrer'>Reddit</a> for monthly coupons and other spam!",
   "BTN_REDEEM": "รับสิทธิ",
   "THANKS_FOR_SUPPORT": "ขอบคุณสำหรับการสนับสนุน {{juiceshop}}!",
   "THANKS_FOR_SUPPORT_CUSTOMIZED": "ขอบคุณสำหรับการสนับสนุนโครงการ Open source ชื่อ {{appname}}!",

@@ -78,7 +78,7 @@
   "INVALID_COUPON_LENGTH": "קוד קופון צריך להיות באורך {{length}} תווים.",
   "INVALID_COUPON": "קופון לא חוקי.",
   "LABEL_COUPON": "קופון",
-  "FOLLOW_FOR_MONTHLY_COUPONS": "Need a coupon code? Follow us on <a href='{{blueSky}}' target='_blank'>BlueSky</a> or <a href='{{reddit}}' target='_blank'>Reddit</a> for monthly coupons and other spam!",
+  "FOLLOW_FOR_MONTHLY_COUPONS": "Need a coupon code? Follow us on <a href='{{blueSky}}' target='_blank' rel='noopener noreferrer'>BlueSky</a> or <a href='{{reddit}}' target='_blank' rel='noopener noreferrer'>Reddit</a> for monthly coupons and other spam!",
   "BTN_REDEEM": "מימוש",
   "THANKS_FOR_SUPPORT": "תודה על התמיכה ב{{juiceshop}}!",
   "THANKS_FOR_SUPPORT_CUSTOMIZED": "תודה לך על התמיכה בפרוייקט הקוד הפתוח שמאחורי {{appname}}!",

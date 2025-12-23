@@ -14,7 +14,7 @@
                           <div>{{ image.caption }}</div>
                           <a *ngIf="twitterHandle"
                             href="https://twitter.com/intent/tweet?text={{ image.caption }} {{ twitterHandle }}&hashtags=appsec"
-                            target="_blank">
+                            target="_blank" rel="noopener noreferrer">
                               <button mat-icon-button aria-label="Tweet">
                                   <i class="fab fa-twitter fa-lg"></i>
                               </button>
