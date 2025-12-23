@@ -5,6 +5,7 @@
 
 import * as frisby from 'frisby'
 import * as utils from '../../lib/utils'
+import { expect } from '@jest/globals'
 
 const Joi = frisby.Joi
 
@@ -22,12 +23,16 @@ describe('/rest/admin/application-version', () => {
 })
 
 describe('/rest/admin/application-configuration', () => {
-  it('GET application configuration', () => {
+  it('GET filtered application configuration', () => {
     return frisby.get(REST_URL + '/application-configuration')
       .expect('status', 200)
       .expect('header', 'content-type', /application\/json/)
       .expect('jsonTypes', {
         config: Joi.object()
+      })
+      .then((res: any) => {
+        // Verify sensitive server configuration is not exposed
+        expect(res.json.config).to.not.have.property('server')
       })
   })
 })
