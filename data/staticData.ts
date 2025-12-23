@@ -53,6 +53,12 @@ export interface StaticUserCard {
   expYear: number
 }
 export async function loadStaticUserData (): Promise<StaticUser[]> {
+  // Security check: Prevent loading hard-coded credentials in production
+  if (process.env.NODE_ENV === 'production') {
+    logger.warn('Attempted to load static user data with hard-coded credentials in production environment')
+    logger.warn('This operation is blocked for security reasons. Use secure user provisioning instead.')
+    return []
+  }
   return await loadStaticData('users') as StaticUser[]
 }
 
