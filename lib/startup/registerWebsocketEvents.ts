@@ -13,7 +13,7 @@ import * as security from '../insecurity'
 let firstConnectedSocket: any = null
 
 const globalWithSocketIO = global as typeof globalThis & {
-  io: SocketIOClientStatic & Server
+  io: Server
 }
 
 const registerWebsocketEvents = (server: any) => {
