@@ -133,7 +133,13 @@ describe('/encryptionkeys', () => {
   it('GET a key file whose name contains a "/" fails with a 403 error', () => {
     return frisby.fetch(URL + '/encryptionkeys/%2fetc%2fos-release%2500.md', {}, { urlEncode: false })
       .expect('status', 403)
-      .expect('bodyContains', 'Error: File names cannot contain forward slashes!')
+      .expect('bodyContains', 'Error: File names cannot contain path traversal characters!')
+  })
+
+  it('GET a key file using path traversal with .. fails with a 403 error', () => {
+    return frisby.fetch(URL + '/encryptionkeys/..%2f..%2f..%2fetc%2fpasswd', {}, { urlEncode: false })
+      .expect('status', 403)
+      .expect('bodyContains', 'Error: Access denied: path traversal attempt detected!')
   })
 })
 
