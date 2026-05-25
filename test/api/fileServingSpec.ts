@@ -113,27 +113,24 @@ describe('/public/images/padding', () => {
 })
 
 describe('/encryptionkeys', () => {
-  it('GET serves a directory listing', () => {
+  it('GET directory listing requires authentication', () => {
     return frisby.get(URL + '/encryptionkeys')
-      .expect('status', 200)
-      .expect('header', 'content-type', /text\/html/)
-      .expect('bodyContains', '<title>listing directory /encryptionkeys</title>')
+      .expect('status', 401)
   })
 
-  it('GET a non-existing file in will return a 404 error', () => {
+  it('GET a non-existing file requires authentication', () => {
     return frisby.get(URL + '/encryptionkeys/doesnotexist.md')
-      .expect('status', 404)
+      .expect('status', 401)
   })
 
-  it('GET the Premium Content AES key', () => {
+  it('GET the Premium Content AES key requires authentication', () => {
     return frisby.get(URL + '/encryptionkeys/premium.key')
-      .expect('status', 200)
+      .expect('status', 401)
   })
 
-  it('GET a key file whose name contains a "/" fails with a 403 error', () => {
+  it('GET a key file whose name contains a "/" requires authentication', () => {
     return frisby.fetch(URL + '/encryptionkeys/%2fetc%2fos-release%2500.md', {}, { urlEncode: false })
-      .expect('status', 403)
-      .expect('bodyContains', 'Error: File names cannot contain forward slashes!')
+      .expect('status', 401)
   })
 })
 
