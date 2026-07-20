@@ -9,7 +9,6 @@ import { type Request, type Response, type NextFunction } from "express";
 import { type UserModel } from "models/user";
 import expressJwt from "express-jwt";
 import jwt from "jsonwebtoken";
-import jws from "jws";
 import sanitizeHtmlLib from "sanitize-html";
 import sanitizeFilenameLib from "sanitize-filename";
 import * as utils from "./utils";
@@ -58,19 +57,28 @@ export const cutOffPoisonNullByte = (str: string) => {
   return str;
 };
 
-export const isAuthorized = () => expressJwt({ secret: publicKey } as any);
+export const isAuthorized = () =>
+  expressJwt({ secret: publicKey, algorithms: ["RS256"] } as any);
 export const denyAll = () => expressJwt({ secret: "" + Math.random() } as any);
 export const authorize = (user = {}) =>
-  jwt.sign(user, privateKey, { expiresIn: "6h", algorithm: "RS256" });
-export const verify = (token: string) =>
-  token
-    ? (jws.verify as (token: string, secret: string) => boolean)(
-        token,
-        publicKey,
-      )
-    : false;
+  jwt.sign(user, privateKey, {
+    expiresIn: "6h",
+    algorithm: "RS256",
+    // allow smaller key sizes used in test/dev environment
+    allowInsecureKeySizes: true,
+  } as any);
+export const verify = (token: string) => {
+  if (!token) return false;
+  try {
+    // verify synchronously without callback; enforce algorithm allowlist
+    jwt.verify(token, publicKey, { algorithms: ["RS256"] } as any);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
 export const decode = (token: string) => {
-  return jws.decode(token)?.payload;
+  return token ? (jwt.decode(token) as any) : undefined;
 };
 
 export const sanitizeHtml = (html: string) => sanitizeHtmlLib(html);
@@ -214,14 +222,19 @@ export const updateAuthenticatedUsers =
   () => (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.token || utils.jwtFrom(req);
     if (token) {
-      jwt.verify(token, publicKey, (err: Error | null, decoded: any) => {
-        if (err === null) {
-          if (authenticatedUsers.get(token) === undefined) {
-            authenticatedUsers.put(token, decoded);
-            res.cookie("token", token);
+      jwt.verify(
+        token,
+        publicKey,
+        { algorithms: ["RS256"] } as any,
+        (err: Error | null, decoded: any) => {
+          if (err === null) {
+            if (authenticatedUsers.get(token) === undefined) {
+              authenticatedUsers.put(token, decoded);
+              res.cookie("token", token);
+            }
           }
-        }
-      });
+        },
+      );
     }
     next();
   };
