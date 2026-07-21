@@ -101,18 +101,33 @@ function getStatus (token: string) {
 
 describe('/rest/2fa/verify', () => {
   it('POST should return a valid authentication when a valid tmp token is passed', async () => {
-    const tmpTokenWurstbrot = security.authorize({
-      userId: 10,
-      type: 'password_valid_needs_second_factor_token'
+    const email = `verifytest@${config.get<string>('application.domain')}`
+    const password = 'VerifyTest123'
+    const totpSecret = 'ASDVAJSDUASZGDIADBJS'
+
+    // register and enable 2fa for this user
+    await register({ email, password, totpSecret })
+
+    // attempt login to receive tmpToken
+    // @ts-expect-error FIXME promise return handling broken
+    const loginRes = await frisby.post(REST_URL + '/user/login', {
+      email,
+      password
+    }).catch((res: any) => {
+      if (res.json?.type && res.json.status === 'totp_token_required') {
+        return res
+      }
+      throw new Error(`Failed to login '${email}'`)
     })
 
-    const totpToken = otplib.authenticator.generate('IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH')
+    const tmpToken = loginRes.json.data.tmpToken
+    const totpToken = otplib.authenticator.generate(totpSecret)
 
     // @ts-expect-error FIXME promise return handling broken
     await frisby.post(REST_URL + '/2fa/verify', {
       headers: jsonHeader,
       body: {
-        tmpToken: tmpTokenWurstbrot,
+        tmpToken,
         totpToken
       }
     })
@@ -124,23 +139,36 @@ describe('/rest/2fa/verify', () => {
         bid: Joi.number()
       })
       .expect('json', 'authentication', {
-        umail: `wurstbrot@${config.get<string>('application.domain')}`
+        umail: email
       })
   })
 
   it('POST should fail if a invalid totp token is used', async () => {
-    const tmpTokenWurstbrot = security.authorize({
-      userId: 10,
-      type: 'password_valid_needs_second_factor_token'
+    const email = `invalidtotp@${config.get<string>('application.domain')}`
+    const password = 'InvalidTotp123'
+    const totpSecret = 'ASDVAJSDUASZGDIADBJS'
+
+    await register({ email, password, totpSecret })
+
+    // @ts-expect-error FIXME promise return handling broken
+    const loginRes = await frisby.post(REST_URL + '/user/login', {
+      email,
+      password
+    }).catch((res: any) => {
+      if (res.json?.type && res.json.status === 'totp_token_required') {
+        return res
+      }
+      throw new Error(`Failed to login '${email}'`)
     })
 
+    const tmpToken = loginRes.json.data.tmpToken
     const totpToken = otplib.authenticator.generate('THIS9ISNT8THE8RIGHT8SECRET')
 
     // @ts-expect-error FIXME promise return handling broken
     await frisby.post(REST_URL + '/2fa/verify', {
       headers: jsonHeader,
       body: {
-        tmpToken: tmpTokenWurstbrot,
+        tmpToken,
         totpToken
       }
     })
@@ -148,18 +176,18 @@ describe('/rest/2fa/verify', () => {
   })
 
   it('POST should fail if a unsigned tmp token is used', async () => {
-    const tmpTokenWurstbrot = jwt.sign({
-      userId: 10,
+    const tmpTokenInvalid = jwt.sign({
+      userId: 9999,
       type: 'password_valid_needs_second_factor_token'
     }, 'this_surly_isnt_the_right_key')
 
-    const totpToken = otplib.authenticator.generate('IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH')
+    const totpToken = otplib.authenticator.generate('ASDVAJSDUASZGDIADBJS')
 
     // @ts-expect-error FIXME promise return handling broken
     await frisby.post(REST_URL + '/2fa/verify', {
       headers: jsonHeader,
       body: {
-        tmpToken: tmpTokenWurstbrot,
+        tmpToken: tmpTokenInvalid,
         totpToken
       }
     })
@@ -169,11 +197,14 @@ describe('/rest/2fa/verify', () => {
 
 describe('/rest/2fa/status', () => {
   it('GET should indicate 2fa is setup for 2fa enabled users', async () => {
-    const { token } = await login({
-      email: `wurstbrot@${config.get<string>('application.domain')}`,
-      password: 'EinBelegtesBrotMitSchinkenSCHINKEN!',
-      totpSecret: 'IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH'
-    })
+    const email = `status2fa@${config.get<string>('application.domain')}`
+    const password = 'StatusTest123'
+    const totpSecret = 'ASDVAJSDUASZGDIADBJS'
+
+    await register({ email, password, totpSecret })
+
+    // login to obtain token (login helper will perform 2fa verify)
+    const { token } = await login({ email, password, totpSecret })
 
     // @ts-expect-error FIXME promise return handling broken
     await frisby.get(
@@ -365,10 +396,11 @@ describe('/rest/2fa/setup', () => {
   })
 
   it('POST should fail if the account has already set up 2fa', async () => {
-    const email = `wurstbrot@${config.get<string>('application.domain')}`
-    const password = 'EinBelegtesBrotMitSchinkenSCHINKEN!'
-    const totpSecret = 'IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH'
+    const email = `alreadysetup@${config.get<string>('application.domain')}`
+    const password = 'AlreadySetup123'
+    const totpSecret = 'ASDVAJSDUASZGDIADBJS'
 
+    await register({ email, password, totpSecret })
     const { token } = await login({ email, password, totpSecret })
 
     // @ts-expect-error FIXME promise return handling broken
