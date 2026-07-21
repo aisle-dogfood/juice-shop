@@ -7,7 +7,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { type Request, type Response, type NextFunction } from "express";
 import { type UserModel } from "models/user";
-import expressJwt from "express-jwt";
+import { expressjwt } from "express-jwt";
 import jwt from "jsonwebtoken";
 import jws from "jws";
 import sanitizeHtmlLib from "sanitize-html";
@@ -58,8 +58,16 @@ export const cutOffPoisonNullByte = (str: string) => {
   return str;
 };
 
-export const isAuthorized = () => expressJwt({ secret: publicKey } as any);
-export const denyAll = () => expressJwt({ secret: "" + Math.random() } as any);
+export const isAuthorized = () =>
+  expressjwt({ secret: publicKey, algorithms: ["RS256"] });
+
+export const denyAll = () => (req: Request, res: Response, _next: NextFunction) => {
+  // Cheap early rejection to avoid expensive cryptographic verification
+  // on endpoints that should simply deny access. This prevents a CPU DoS
+  // vector where expensive RSA verification would be attempted for every request.
+  res.status(403).json({ error: 'Forbidden' });
+};
+
 export const authorize = (user = {}) =>
   jwt.sign(user, privateKey, { expiresIn: "6h", algorithm: "RS256" });
 export const verify = (token: string) =>
@@ -214,7 +222,7 @@ export const updateAuthenticatedUsers =
   () => (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.token || utils.jwtFrom(req);
     if (token) {
-      jwt.verify(token, publicKey, (err: Error | null, decoded: any) => {
+      jwt.verify(token, publicKey, { algorithms: ["RS256"] }, (err: Error | null, decoded: any) => {
         if (err === null) {
           if (authenticatedUsers.get(token) === undefined) {
             authenticatedUsers.put(token, decoded);
