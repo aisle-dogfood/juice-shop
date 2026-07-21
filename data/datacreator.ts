@@ -31,6 +31,7 @@ import { ordersCollection, reviewsCollection } from './mongodb'
 import { AllHtmlEntities as Entities } from 'html-entities'
 import * as datacache from './datacache'
 import * as security from '../lib/insecurity'
+import * as otplib from 'otplib'
 // @ts-expect-error FIXME due to non-existing type definitions for replace
 import replace from 'replace'
 
@@ -104,9 +105,12 @@ async function createUsers () {
   const users = await loadStaticUserData()
 
   await Promise.all(
-    users.map(async ({ username, email, password, customDomain, key, role, deletedFlag, profileImage, securityQuestion, feedback, address, card, totpSecret, lastLoginIp = '' }) => {
+    users.map(async ({ username, email, password, customDomain, key, role, deletedFlag, profileImage, securityQuestion, feedback, address, card, totpSecret, twoFactorSeed = false, lastLoginIp = '' }) => {
       try {
         const completeEmail = customDomain ? email : `${email}@${config.get<string>('application.domain')}`
+        const seededTotpSecret = (typeof totpSecret === 'string' && totpSecret.trim().length > 0)
+          ? totpSecret
+          : (twoFactorSeed ? otplib.authenticator.generateSecret() : '')
         const user = await UserModel.create({
           username,
           email: completeEmail,
@@ -114,7 +118,7 @@ async function createUsers () {
           role,
           deluxeToken: role === security.roles.deluxe ? security.deluxeToken(completeEmail) : '',
           profileImage: `assets/public/images/uploads/${profileImage ?? (role === security.roles.admin ? 'defaultAdmin.png' : 'default.svg')}`,
-          totpSecret,
+          totpSecret: seededTotpSecret,
           lastLoginIp
         })
         datacache.users[key] = user

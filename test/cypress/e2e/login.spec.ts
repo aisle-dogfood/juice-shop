@@ -123,7 +123,7 @@ describe('/#/login', () => {
         }
       )
 
-      cy.task<string>('GenerateAuthenticator', 'IFTXE3SPOEYVURT2MRYGI52TKJ4HC3KH').then(
+      cy.task<string>('GenerateAuthenticator', 'ASDVAJSDUASZGDIADBJS').then(
         (totpToken: string) => {
           void cy.get('#totpToken').type(totpToken)
           void cy.get('#totpSubmitButton').click()
