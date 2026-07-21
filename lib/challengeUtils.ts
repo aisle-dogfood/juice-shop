@@ -15,7 +15,7 @@ import { challenges, notifications } from '../data/datacache'
 const entities = new Entities()
 
 const globalWithSocketIO = global as typeof globalThis & {
-  io: SocketIOClientStatic & Server
+  socketIoServer?: Server
 }
 
 export const solveIf = function (challenge: any, criteria: () => any, isRestore: boolean = false) {
@@ -54,8 +54,8 @@ export const sendNotification = function (challenge: { difficulty?: number, key:
     const wasPreviouslyShown = notifications.some(({ key }) => key === challenge.key)
     notifications.push(notification)
 
-    if (globalWithSocketIO.io && (isRestore || !wasPreviouslyShown)) {
-      globalWithSocketIO.io.emit('challenge solved', notification)
+    if (globalWithSocketIO.socketIoServer && (isRestore || !wasPreviouslyShown)) {
+      globalWithSocketIO.socketIoServer.emit('challenge solved', notification)
     }
   }
 }
@@ -66,8 +66,8 @@ export const sendCodingChallengeNotification = function (challenge: { key: strin
       key: challenge.key,
       codingChallengeStatus: challenge.codingChallengeStatus
     }
-    if (globalWithSocketIO.io) {
-      globalWithSocketIO.io.emit('code challenge solved', notification)
+    if (globalWithSocketIO.socketIoServer) {
+      globalWithSocketIO.socketIoServer.emit('code challenge solved', notification)
     }
   }
 }

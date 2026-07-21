@@ -6,6 +6,7 @@
 import config from 'config'
 import * as utils from '../utils'
 import { Server } from 'socket.io'
+import logger from '../logger'
 import { notifications, challenges } from '../../data/datacache'
 import * as challengeUtils from '../challengeUtils'
 import * as security from '../insecurity'
@@ -13,15 +14,30 @@ import * as security from '../insecurity'
 let firstConnectedSocket: any = null
 
 const globalWithSocketIO = global as typeof globalThis & {
-  io: SocketIOClientStatic & Server
+  socketIoServer?: Server
 }
 
 const registerWebsocketEvents = (server: any) => {
   const io = new Server(server, { cors: { origin: 'http://localhost:4200' } })
-  // @ts-expect-error FIXME Type safety issue when setting global socket-io object
-  globalWithSocketIO.io = io
+  globalWithSocketIO.socketIoServer = io
+
+  // Defensive: ensure unexpected Engine.IO / Socket.IO errors don't crash the whole Node process
+  io.engine.on('error', (error: unknown) => {
+    logger.warn('Socket.IO engine error: ' + utils.getErrorMessage(error))
+  })
+  io.engine.on('connection_error', (error: any) => {
+    // Engine.IO provides useful context on connection errors (e.g. invalid packets)
+    logger.warn('Socket.IO connection error: ' + (error?.message ?? utils.getErrorMessage(error)))
+  })
 
   io.on('connection', (socket: any) => {
+    socket.on('error', (error: unknown) => {
+      logger.warn('Socket.IO socket error: ' + utils.getErrorMessage(error))
+    })
+    socket.conn?.on?.('error', (error: unknown) => {
+      logger.warn('Socket.IO transport error: ' + utils.getErrorMessage(error))
+    })
+
     if (firstConnectedSocket === null) {
       socket.emit('server started')
       firstConnectedSocket = socket.id
