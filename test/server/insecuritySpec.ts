@@ -6,7 +6,8 @@
 // @ts-expect-error FIXME no typescript definitions for z85 :(
 import z85 from 'z85'
 import chai from 'chai'
-import * as security from '../../lib/insecurity'
+process.env.HMAC_KEY = 'pa4qacea4VK9t9nGv7yZtwmj'
+const security = require('../../lib/insecurity')
 import type { UserModel } from 'models/user'
 import type { Request } from 'express'
 const expect = chai.expect
