@@ -59,7 +59,16 @@ export function getUserProfile () {
         if (!code) {
           throw new Error('Username is null')
         }
-        username = eval(code) // eslint-disable-line no-eval
+        // Do not evaluate arbitrary code from the username. Only allow string
+        // literals inside #{...}, e.g. #{"<script>..."} -> will be unwrapped and
+        // inserted into the template. This prevents remote code execution on the server.
+        const stringLiteralMatch = code.match(/^\s*(['"`])([\s\S]*)\1\s*$/)
+        if (stringLiteralMatch) {
+          username = stringLiteralMatch[2]
+        } else {
+          // Any non-literal expression is treated as plain text and escaped
+          username = '\\' + username
+        }
       } catch (err) {
         username = '\\' + username
       }
@@ -71,7 +80,7 @@ export function getUserProfile () {
     const theme = themes[themeKey] || themes['bluegrey-lightgreen']
 
     if (username) {
-      template = template.replace(/_username_/g, username)
+      template = template.replace(/_username_/g, entities.encode(String(username)))
     }
     template = template.replace(/_emailHash_/g, security.hash(user?.email))
     template = template.replace(/_title_/g, entities.encode(config.get<string>('application.name')))
