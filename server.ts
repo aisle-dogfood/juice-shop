@@ -475,7 +475,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
     { name: 'Complaint', exclude: [], model: ComplaintModel },
     { name: 'Recycle', exclude: [], model: RecycleModel },
     { name: 'SecurityQuestion', exclude: [], model: SecurityQuestionModel },
-    { name: 'SecurityAnswer', exclude: [], model: SecurityAnswerModel },
+    { name: 'SecurityAnswer', exclude: ['answer'], model: SecurityAnswerModel },
     { name: 'Address', exclude: [], model: AddressModel },
     { name: 'PrivacyRequest', exclude: [], model: PrivacyRequestModel },
     { name: 'Card', exclude: [], model: CardModel },

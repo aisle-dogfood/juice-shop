@@ -63,3 +63,6 @@ config/*.yml
 
 # System Files
 .DS_Store
+
+# Prevent committing private keys
+encryptionkeys/*.key
