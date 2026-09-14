@@ -80,7 +80,10 @@ export const promotionVideo = () => {
 function getSubsFromFile () {
   const subtitles = config.get<string>('application.promotion.subtitles') ?? 'owasp_promo.vtt'
   const data = fs.readFileSync('frontend/dist/frontend/assets/public/videos/' + subtitles, 'utf8')
-  return data.toString()
+  // Sanitize subtitle content to prevent breaking out of the enclosing <script> tag and
+  // thereby avoid potential XSS via payloads like </script><script>...\u003C/script>
+  // Only escape closing </script> sequences to preserve WebVTT formatting as much as possible.
+  return data.toString().replace(/<\/script>/gi, '<\\/script>')
 }
 
 function videoPath () {
