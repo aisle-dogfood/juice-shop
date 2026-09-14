@@ -24,6 +24,12 @@ describe('/promotion', () => {
       .expect('header', 'content-type', /text\/html/)
       .expect('bodyContains', '<script id="subtitle" type="text/vtt" data-label="English" data-lang="en">')
   })
+
+  it('GET promotion video page does not allow injecting script tags via subtitles', () => {
+    return frisby.get(URL + '/promotion')
+      .expect('header', 'content-type', /text\/html/)
+      .expect('bodyNotContains', '</script><script')
+  })
 })
 
 describe('/video', () => {
