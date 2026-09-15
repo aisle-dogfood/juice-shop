@@ -274,9 +274,16 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.use('/encryptionkeys', serveIndexMiddleware, serveIndex('encryptionkeys', { icons: true, view: 'details' }))
   app.use('/encryptionkeys/:file', serveKeyFiles())
 
-  /* /logs directory browsing */ // vuln-code-snippet neutral-line accessLogDisclosureChallenge
-  app.use('/support/logs', serveIndexMiddleware, serveIndex('logs', { icons: true, view: 'details' })) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
-  app.use('/support/logs', verify.accessControlChallenges()) // vuln-code-snippet hide-line
+  /* /logs directory: disable directory listing and protect access to log files */
+  app.use('/support/logs', verify.accessControlChallenges(), security.isAuthorized(), (req: Request, res: Response, next: NextFunction) => {
+    const token = utils.jwtFrom(req)
+    const decoded = security.verify(token) && security.decode(token)
+    if (decoded?.data?.role === security.roles.admin) {
+      next()
+    } else {
+      res.status(403).json({ error: 'Malicious activity detected' })
+    }
+  })
   app.use('/support/logs/:file', serveLogFiles()) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
 
   /* Swagger documentation for B2B v2 endpoints */
