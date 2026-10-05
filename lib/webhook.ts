@@ -15,6 +15,9 @@ export const notify = async (challenge: { key: any, name: any }, cheatScore = -1
   if (!webhook) {
     return
   }
+  // print challenge key and name using logger
+  logger.info(`Challenge key: ${challenge.key}`)
+  logger.info(`Challenge name: ${challenge.name}`)
   const res = await fetch(webhook, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
