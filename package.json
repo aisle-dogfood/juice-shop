@@ -124,7 +124,7 @@
     "colors": "1.4.0",
     "compression": "^1.7.4",
     "config": "^3.3.12",
-    "cookie-parser": "1.4.5",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dottie": "^2.0.6",
     "download": "^8.0.0",
