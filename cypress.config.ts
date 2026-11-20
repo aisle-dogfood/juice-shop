@@ -1,4 +1,6 @@
 import { defineConfig } from 'cypress'
+import './test/testJwtKeySetup'
+import jwt from 'jsonwebtoken'
 import * as security from './lib/insecurity'
 import config from 'config'
 import type { Memory as MemoryConfig, Product as ProductConfig } from './lib/config.types'
@@ -72,6 +74,13 @@ export default defineConfig({
         },
         GenerateAuthenticator (inputString: string) {
           return otplib.authenticator.generate(inputString)
+        },
+        GenerateForgedSignedJWT (email: string) {
+          return jwt.sign(
+            { data: { email } },
+            security.publicKey,
+            { algorithm: 'HS256' }
+          )
         },
         toISO8601 () {
           const date = new Date()

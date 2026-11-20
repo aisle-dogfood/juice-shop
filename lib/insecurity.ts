@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-import fs from "node:fs";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { type Request, type Response, type NextFunction } from "express";
 import { type UserModel } from "models/user";
 import expressJwt from "express-jwt";
@@ -14,9 +15,174 @@ import sanitizeHtmlLib from "sanitize-html";
 import sanitizeFilenameLib from "sanitize-filename";
 import * as utils from "./utils";
 
-export const publicKey = fs
-  ? fs.readFileSync("encryptionkeys/jwt.pub", "utf8")
-  : "placeholder-public-key";
+interface JwtKeyPair {
+  privateKey: string;
+  publicKey: string;
+}
+
+const jwtPrivateKeyFile = path.resolve("encryptionkeys", "jwt.key");
+const noFollow = (fs.constants as typeof fs.constants & { O_NOFOLLOW?: number }).O_NOFOLLOW;
+const currentUserId = typeof process.getuid === "function" ? process.getuid() : undefined;
+
+const requireNoFollowSupport = () => {
+  if (noFollow === undefined) {
+    throw new Error("JWT file fallback requires filesystem no-follow support");
+  }
+  return noFollow;
+};
+
+const derivePublicKey = (privateKey: string) =>
+  crypto
+    .createPublicKey(privateKey)
+    .export({ type: "pkcs1", format: "pem" })
+    .toString();
+
+const assertSecurePath = (filePath: string, stats: fs.Stats, description: string) => {
+  if (!stats.isFile() && !stats.isDirectory()) {
+    throw new Error(`JWT ${description} must be a regular filesystem object`);
+  }
+  if (stats.isSymbolicLink() || (stats.mode & 0o077) !== 0) {
+    throw new Error(`JWT ${description} has unsafe permissions or link type`);
+  }
+  if (currentUserId !== undefined && stats.uid !== currentUserId) {
+    throw new Error(`JWT ${description} must be owned by the service user`);
+  }
+  if (filePath === jwtPrivateKeyFile && stats.size === 0) {
+    throw new Error("JWT private key file must contain key material");
+  }
+};
+
+const openedPath = (fileDescriptor: number) => {
+  if (process.platform !== "linux") {
+    throw new Error("JWT file fallback requires descriptor path verification");
+  }
+  return fs.realpathSync(`/proc/self/fd/${fileDescriptor}`);
+};
+
+const openKeyDirectory = () => {
+  const directory = path.dirname(jwtPrivateKeyFile);
+  const directoryFlag = (fs.constants as typeof fs.constants & { O_DIRECTORY?: number }).O_DIRECTORY;
+  if (directoryFlag === undefined) {
+    throw new Error("JWT file fallback requires directory descriptor support");
+  }
+
+  const directoryDescriptor = fs.openSync(directory, fs.constants.O_RDONLY | directoryFlag | requireNoFollowSupport());
+  try {
+    let stats = fs.fstatSync(directoryDescriptor);
+    if (!stats.isDirectory() || (currentUserId !== undefined && stats.uid !== currentUserId)) {
+      throw new Error("JWT private key directory must be owned and private");
+    }
+    if (currentUserId !== undefined && (stats.mode & 0o077) !== 0) {
+      fs.fchmodSync(directoryDescriptor, 0o700);
+      stats = fs.fstatSync(directoryDescriptor);
+    }
+    assertSecurePath(directory, stats, "private key directory");
+    return { descriptor: directoryDescriptor, path: openedPath(directoryDescriptor) };
+  } catch (error) {
+    fs.closeSync(directoryDescriptor);
+    throw error;
+  }
+};
+
+const readPrivateKeyFile = (): string | undefined => {
+  const directory = openKeyDirectory();
+  let fileDescriptor: number | undefined;
+
+  try {
+    fileDescriptor = fs.openSync(jwtPrivateKeyFile, fs.constants.O_RDONLY | requireNoFollowSupport());
+    if (openedPath(fileDescriptor) !== path.join(directory.path, "jwt.key")) {
+      throw new Error("JWT private key path changed during initialization");
+    }
+  } catch (error: any) {
+    if (fileDescriptor !== undefined) fs.closeSync(fileDescriptor);
+    fs.closeSync(directory.descriptor);
+    if (error?.code === "ENOENT") return undefined;
+    throw error;
+  }
+
+  if (fileDescriptor === undefined) throw new Error("JWT private key descriptor was not opened");
+  const openedFileDescriptor = fileDescriptor;
+  try {
+    const stats = fs.fstatSync(openedFileDescriptor);
+    assertSecurePath(jwtPrivateKeyFile, stats, "private key file");
+    return fs.readFileSync(openedFileDescriptor, "utf8");
+  } finally {
+    fs.closeSync(openedFileDescriptor);
+    fs.closeSync(directory.descriptor);
+  }
+};
+
+const createPrivateKeyFile = (privateKey: string): boolean => {
+  const directory = openKeyDirectory();
+  const temporaryPath = path.join(directory.path, `.jwt.key.${process.pid}.${crypto.randomBytes(16).toString("hex")}.tmp`);
+  let temporaryDescriptor: number | undefined;
+
+  try {
+    temporaryDescriptor = fs.openSync(
+      temporaryPath,
+      fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | requireNoFollowSupport(),
+      0o600,
+    );
+    if (openedPath(temporaryDescriptor) !== temporaryPath) {
+      throw new Error("JWT private key temporary path changed during initialization");
+    }
+    fs.writeFileSync(temporaryDescriptor, privateKey, { encoding: "utf8" });
+    fs.fsyncSync(temporaryDescriptor);
+    assertSecurePath(temporaryPath, fs.fstatSync(temporaryDescriptor), "private key temporary file");
+    fs.closeSync(temporaryDescriptor);
+    temporaryDescriptor = undefined;
+
+    fs.linkSync(temporaryPath, path.join(directory.path, "jwt.key"));
+    return true;
+  } catch (error: any) {
+    if (error?.code === "EEXIST") return false;
+    throw error;
+  } finally {
+    if (temporaryDescriptor !== undefined) fs.closeSync(temporaryDescriptor);
+    try { fs.unlinkSync(temporaryPath) } catch { /* temporary file was published or never created */ }
+    fs.closeSync(directory.descriptor);
+  }
+};
+
+const generateJwtKeyPair = (): JwtKeyPair => {
+  const keyPair = crypto.generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: "pkcs1", format: "pem" },
+    privateKeyEncoding: { type: "pkcs1", format: "pem" },
+  });
+
+  if (createPrivateKeyFile(keyPair.privateKey)) return keyPair;
+
+  const storedPrivateKey = readPrivateKeyFile();
+  if (!storedPrivateKey) throw new Error("JWT private key disappeared during initialization");
+  return { privateKey: storedPrivateKey, publicKey: derivePublicKey(storedPrivateKey) };
+};
+
+const loadJwtKeyPair = (): JwtKeyPair => {
+  const configuredPrivateKey = process.env.JWT_PRIVATE_KEY;
+  if (configuredPrivateKey) {
+    const derivedPublicKey = derivePublicKey(configuredPrivateKey);
+    if (process.env.JWT_PUBLIC_KEY && process.env.JWT_PUBLIC_KEY !== derivedPublicKey) {
+      throw new Error("JWT_PUBLIC_KEY does not match JWT_PRIVATE_KEY");
+    }
+    return { privateKey: configuredPrivateKey, publicKey: derivedPublicKey };
+  }
+
+  const storedPrivateKey = readPrivateKeyFile();
+  if (storedPrivateKey) {
+    const derivedPublicKey = derivePublicKey(storedPrivateKey);
+    if (process.env.JWT_PUBLIC_KEY && process.env.JWT_PUBLIC_KEY !== derivedPublicKey) {
+      throw new Error("JWT_PUBLIC_KEY does not match JWT_PRIVATE_KEY");
+    }
+    return { privateKey: storedPrivateKey, publicKey: derivedPublicKey };
+  }
+
+  return generateJwtKeyPair();
+};
+
+const { publicKey, privateKey } = loadJwtKeyPair();
+
+export { publicKey };
 
 /* jslint node: true */
 // eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
@@ -40,9 +206,6 @@ interface IAuthenticatedUsers {
   from: (req: Request) => ResponseWithUser | undefined;
   updateFrom: (req: Request, user: ResponseWithUser) => any;
 }
-
-const privateKey =
-  "-----BEGIN RSA PRIVATE KEY-----\r\nMIICXAIBAAKBgQDNwqLEe9wgTXCbC7+RPdDbBbeqjdbs4kOPOIGzqLpXvJXlxxW8iMz0EaM4BKUqYsIa+ndv3NAn2RxCd5ubVdJJcX43zO6Ko0TFEZx/65gY3BE0O6syCEmUP4qbSd6exou/F+WTISzbQ5FBVPVmhnYhG/kpwt/cIxK5iUn5hm+4tQIDAQABAoGBAI+8xiPoOrA+KMnG/T4jJsG6TsHQcDHvJi7o1IKC/hnIXha0atTX5AUkRRce95qSfvKFweXdJXSQ0JMGJyfuXgU6dI0TcseFRfewXAa/ssxAC+iUVR6KUMh1PE2wXLitfeI6JLvVtrBYswm2I7CtY0q8n5AGimHWVXJPLfGV7m0BAkEA+fqFt2LXbLtyg6wZyxMA/cnmt5Nt3U2dAu77MzFJvibANUNHE4HPLZxjGNXN+a6m0K6TD4kDdh5HfUYLWWRBYQJBANK3carmulBwqzcDBjsJ0YrIONBpCAsXxk8idXb8jL9aNIg15Wumm2enqqObahDHB5jnGOLmbasizvSVqypfM9UCQCQl8xIqy+YgURXzXCN+kwUgHinrutZms87Jyi+D8Br8NY0+Nlf+zHvXAomD2W5CsEK7C+8SLBr3k/TsnRWHJuECQHFE9RA2OP8WoaLPuGCyFXaxzICThSRZYluVnWkZtxsBhW2W8z1b8PvWUE7kMy7TnkzeJS2LSnaNHoyxi7IaPQUCQCwWU4U+v4lD7uYBw00Ga/xt+7+UqFPlPVdz1yyr4q24Zxaw0LgmuEvgU5dycq8N7JxjTubX0MIRR+G9fmDBBl8=\r\n-----END RSA PRIVATE KEY-----";
 
 export const hash = (data: string) =>
   crypto.createHash("md5").update(data).digest("hex");

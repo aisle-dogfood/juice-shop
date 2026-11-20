@@ -39,12 +39,37 @@ function handleZipFileUpload ({ file }: Request, res: Response, next: NextFuncti
               .pipe(unzipper.Parse())
               .on('entry', function (entry: any) {
                 const fileName = entry.path
-                const absolutePath = path.resolve('uploads/complaints/' + fileName)
-                challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-                if (absolutePath.includes(path.resolve('.'))) {
-                  entry.pipe(fs.createWriteStream('uploads/complaints/' + fileName).on('error', function (err) { next(err) }))
-                } else {
+                const complaintsDirectory = path.resolve('uploads/complaints')
+                const noFollow = (fs.constants as typeof fs.constants & { O_NOFOLLOW?: number }).O_NOFOLLOW
+                const directoryFlag = (fs.constants as typeof fs.constants & { O_DIRECTORY?: number }).O_DIRECTORY
+
+                if (noFollow === undefined || directoryFlag === undefined ||
+                    fileName !== path.basename(fileName) || fileName === '.' || fileName === '..') {
                   entry.autodrain()
+                  return
+                }
+
+                let directoryDescriptor: number | undefined
+                let fileDescriptor: number | undefined
+                try {
+                  directoryDescriptor = fs.openSync(complaintsDirectory, fs.constants.O_RDONLY | directoryFlag | noFollow)
+                  const directoryPath = fs.realpathSync(`/proc/self/fd/${directoryDescriptor}`)
+                  fileDescriptor = fs.openSync(
+                    path.join(directoryPath, fileName),
+                    fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | noFollow,
+                    0o600,
+                  )
+                  if (fs.realpathSync(`/proc/self/fd/${fileDescriptor}`) !== path.join(directoryPath, fileName)) {
+                    throw new Error('Upload path changed during initialization')
+                  }
+                  entry.pipe(fs.createWriteStream(path.join(directoryPath, fileName), { fd: fileDescriptor, autoClose: true })
+                    .on('error', function (err) { next(err) }))
+                  fileDescriptor = undefined
+                } catch {
+                  if (fileDescriptor !== undefined) fs.closeSync(fileDescriptor)
+                  entry.autodrain()
+                } finally {
+                  if (directoryDescriptor !== undefined) fs.closeSync(directoryDescriptor)
                 }
               }).on('error', function (err: unknown) { next(err) })
           })
