@@ -3,4 +3,6 @@
  * SPDX-License-Identifier: MIT
  */
 
+import './testJwtKeySetup'
+
 jest.setTimeout(10000) // eslint-disable-line

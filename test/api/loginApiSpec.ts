@@ -71,6 +71,30 @@ describe('/rest/user/login', () => {
       })
   })
 
+  it('POST login returns a token that grants access to authenticated endpoints', async () => {
+    const response = await frisby.post(REST_URL + '/user/login', {
+      headers: jsonHeader,
+      body: {
+        email: 'admin@' + config.get<string>('application.domain'),
+        password: 'admin123'
+      }
+    })
+      .expect('status', 200)
+      .expect('header', 'content-type', /application\/json/)
+      .expect('jsonTypes', 'authentication', {
+        token: Joi.string()
+      })
+      .promise()
+
+    return frisby.get(API_URL + '/Users', {
+      headers: {
+        Authorization: `Bearer ${response.json.authentication.token}`,
+        'content-type': 'application/json'
+      }
+    })
+      .expect('status', 200)
+  })
+
   it('POST login with support-team credentials', () => {
     return frisby.post(REST_URL + '/user/login', {
       headers: jsonHeader,

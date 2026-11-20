@@ -113,27 +113,39 @@ describe('/public/images/padding', () => {
 })
 
 describe('/encryptionkeys', () => {
-  it('GET serves a directory listing', () => {
+  it('GET directory access is forbidden', () => {
     return frisby.get(URL + '/encryptionkeys')
-      .expect('status', 200)
-      .expect('header', 'content-type', /text\/html/)
-      .expect('bodyContains', '<title>listing directory /encryptionkeys</title>')
+      .expect('status', 403)
   })
 
-  it('GET a non-existing file in will return a 404 error', () => {
+  it('GET a key file returns a 403 error', () => {
     return frisby.get(URL + '/encryptionkeys/doesnotexist.md')
-      .expect('status', 404)
+      .expect('status', 403)
+      .expect('bodyContains', 'Error: Key file downloads are disabled: doesnotexist.md')
   })
 
-  it('GET the Premium Content AES key', () => {
+  it('GET the JWT public key is forbidden', () => {
+    return frisby.get(URL + '/encryptionkeys/jwt.pub')
+      .expect('status', 403)
+      .expect('bodyContains', 'Error: Key file downloads are disabled: jwt.pub')
+  })
+
+  it('GET the Premium Content AES key is forbidden', () => {
     return frisby.get(URL + '/encryptionkeys/premium.key')
-      .expect('status', 200)
+      .expect('status', 403)
+      .expect('bodyContains', 'Error: Key file downloads are disabled: premium.key')
+  })
+
+  it('GET the JWT private key is forbidden', () => {
+    return frisby.get(URL + '/encryptionkeys/jwt.key')
+      .expect('status', 403)
+      .expect('bodyContains', 'Error: Key file downloads are disabled: jwt.key')
   })
 
   it('GET a key file whose name contains a "/" fails with a 403 error', () => {
     return frisby.fetch(URL + '/encryptionkeys/%2fetc%2fos-release%2500.md', {}, { urlEncode: false })
       .expect('status', 403)
-      .expect('bodyContains', 'Error: File names cannot contain forward slashes!')
+      .expect('bodyContains', 'Error: Key file downloads are disabled')
   })
 })
 
